@@ -1,7 +1,12 @@
 import { Router } from "express";
 import { userRoutes } from "./user.routes";
+import { metadataRoutes } from "./metadata.routes";
+import { spaceRoutes } from "./space.routes";
+import { adminRoutes } from "./admin.routes";
 
 export const routes = Router();
 
 routes.use("/user", userRoutes);
-routes.use("/user/");
+routes.use("/user/metadata", metadataRoutes);
+routes.use("/space", spaceRoutes);
+routes.use("/admin", adminRoutes);

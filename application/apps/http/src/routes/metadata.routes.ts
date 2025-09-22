@@ -2,14 +2,21 @@ import { Request, Response, Router } from "express";
 
 export const metadataRoutes = Router();
 
-metadataRoutes.post("/signup", (req: Request, res: Response) => {
+metadataRoutes.post("/", (req: Request, res: Response) => {
   res.json({
-    message: "signup",
+    message: `updating avatar for user with avatarId ${req.body.avatarId}`,
   });
 });
 
-metadataRoutes.post("/signin", (req: Request, res: Response) => {
+metadataRoutes.get("/avatars", (req: Request, res: Response) => {
   res.json({
-    message: "signin",
+    message: "returns all avatars available",
+  });
+});
+
+metadataRoutes.get("/bulk", (req: Request, res: Response) => {
+  const idArray = req.query.ids;
+  res.json({
+    message: `get room user metadata for ${idArray}`,
   });
 });

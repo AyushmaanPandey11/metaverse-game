@@ -13,3 +13,10 @@ userRoutes.post("/signin", (req: Request, res: Response) => {
     message: "signin",
   });
 });
+
+userRoutes.get("/elements", (req: Request, res: Response) => {
+  return res.json({
+    message: "fetched all elements",
+    elements: [],
+  });
+});
