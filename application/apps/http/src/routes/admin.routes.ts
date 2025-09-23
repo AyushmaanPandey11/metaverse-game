@@ -1,9 +1,11 @@
 import { Request, Response, Router } from "express";
 import client from "@repo/db/client";
+import z from "zod";
 export const adminRoutes = Router();
 
 adminRoutes.post("/elements", (req: Request, res: Response) => {
-  //   const { imageUrl, width, height, static } = req.body;
+  const reqBody = req.body;
+  // const {} =
   res.json({
     message: "added element",
     id: "randomId",
