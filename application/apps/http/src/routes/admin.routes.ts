@@ -1,5 +1,5 @@
 import { Request, Response, Router } from "express";
-
+import client from "@repo/db/client";
 export const adminRoutes = Router();
 
 adminRoutes.post("/elements", (req: Request, res: Response) => {
