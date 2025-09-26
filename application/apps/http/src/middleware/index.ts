@@ -13,10 +13,8 @@ export const validateUser = (
     if (!token) {
       throw new Error("Authorization token is missing.");
     }
-
-    const secretKey = process.env.JWT_SECRET as string;
+    // const secretKey = process.env.JWT_SECRET as string;
     const decoded = jwt.verify(token, secretKey) as JwtPayload;
-
     if (!decoded.role) {
       return res.status(401).send("User role not found in token.");
     }
@@ -37,8 +35,6 @@ export const validateAdmin = (
     if (!token) {
       throw new Error("Authorization token is missing.");
     }
-
-    const secretKey = process.env.JWT_SECRET as string;
     const decoded = jwt.verify(token, secretKey) as JwtPayload;
 
     if (!decoded.role) {

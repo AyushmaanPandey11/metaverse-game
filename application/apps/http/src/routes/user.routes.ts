@@ -14,7 +14,7 @@ userRoutes.post("/signup", async (req: Request, res: Response) => {
   if (!success) {
     return res.status(404).json({
       message: "invalid body",
-      error,
+      error: error.message,
     });
   }
   const hashedPassword = await bcrypt.hash(data.password, 10);
@@ -22,7 +22,7 @@ userRoutes.post("/signup", async (req: Request, res: Response) => {
     data: {
       username: data.username,
       password: hashedPassword,
-      role: data.type as unknown as Role,
+      role: data.role === "admin" ? "Admin" : "User",
     },
   });
 
@@ -43,7 +43,7 @@ userRoutes.post("/signin", async (req: Request, res: Response) => {
   if (!success) {
     return res.status(404).json({
       message: "invalid body",
-      error,
+      error: error.message,
     });
   }
   const user = await client.user.findUnique({

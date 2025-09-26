@@ -9,25 +9,24 @@ metadataRoutes.post("/", validateUser, async (req: Request, res: Response) => {
   if (!success) {
     return res.status(404).json({
       message: "invalid request body",
-      error,
+      error: error.message,
     });
   }
-  const result = await client.user.update({
-    where: {
-      id: req.userId,
-    },
-    data: {
-      avatarId: data.avatarId,
-    },
-  });
-  if (result.avatarId !== data.avatarId) {
-    return res.status(500).json({
-      message: "error from server side",
+  try {
+    await client.user.update({
+      where: {
+        id: req.userId,
+      },
+      data: {
+        avatarId: data.avatarId,
+      },
     });
+    return res.status(200).json({
+      message: `updating avatar for user with avatarId ${req.body.avatarId}`,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error" });
   }
-  return res.status(200).json({
-    message: `updating avatar for user with avatarId ${req.body.avatarId}`,
-  });
 });
 
 metadataRoutes.get("/avatars", async (req: Request, res: Response) => {
