@@ -48,6 +48,7 @@ model spaceElements {
 model Element {
   id          String  @id @unique @default(cuid())
   imageUrl    String
+  static      Boolean 
   height      Int
   width       Int
   spaces      spaceElements[]

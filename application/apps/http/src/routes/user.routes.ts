@@ -66,7 +66,7 @@ userRoutes.post("/signin", async (req: Request, res: Response) => {
 
   const token = jwt.sign(
     {
-      id: user.id,
+      userId: user.id,
       role: user.role,
     },
     secretKey,
@@ -78,9 +78,19 @@ userRoutes.post("/signin", async (req: Request, res: Response) => {
   });
 });
 
-userRoutes.get("/elements", validateUser, (req: Request, res: Response) => {
-  return res.json({
-    message: "fetched all elements",
-    elements: [],
-  });
-});
+userRoutes.get(
+  "/elements",
+  validateUser,
+  async (req: Request, res: Response) => {
+    const fetchData = await client.element.findMany();
+    if (!fetchData) {
+      return res.status(500).json({
+        message: "error from fetching element",
+      });
+    }
+    return res.json({
+      message: "fetched all elements",
+      elements: fetchData,
+    });
+  }
+);

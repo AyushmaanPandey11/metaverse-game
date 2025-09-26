@@ -1,9 +1,9 @@
 import { Request, Response, Router } from "express";
 import client from "@repo/db/client";
-import z from "zod";
+import { validateAdmin } from "../middleware";
 export const adminRoutes = Router();
 
-adminRoutes.post("/elements", (req: Request, res: Response) => {
+adminRoutes.post("/elements", validateAdmin, (req: Request, res: Response) => {
   const reqBody = req.body;
   // const {} =
   res.json({
