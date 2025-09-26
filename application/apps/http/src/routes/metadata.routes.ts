@@ -5,10 +5,11 @@ import client from "@repo/db/client";
 export const metadataRoutes = Router();
 
 metadataRoutes.post("/", validateUser, async (req: Request, res: Response) => {
-  const { success, data } = updateMetadataSchema.safeParse(req.body);
+  const { success, data, error } = updateMetadataSchema.safeParse(req.body);
   if (!success) {
     return res.status(404).json({
       message: "invalid request body",
+      error,
     });
   }
   const result = await client.user.update({

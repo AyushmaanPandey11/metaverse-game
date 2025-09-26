@@ -10,10 +10,11 @@ export const userRoutes = Router();
 
 userRoutes.post("/signup", async (req: Request, res: Response) => {
   const reqBody = req.body;
-  const { success, data } = signupSchema.safeParse(reqBody);
+  const { success, data, error } = signupSchema.safeParse(reqBody);
   if (!success) {
     return res.status(404).json({
       message: "invalid body",
+      error,
     });
   }
   const hashedPassword = await bcrypt.hash(data.password, 10);
@@ -38,10 +39,11 @@ userRoutes.post("/signup", async (req: Request, res: Response) => {
 
 userRoutes.post("/signin", async (req: Request, res: Response) => {
   const reqBody = req.body;
-  const { success, data } = signinSchema.safeParse(reqBody);
+  const { success, data, error } = signinSchema.safeParse(reqBody);
   if (!success) {
     return res.status(404).json({
       message: "invalid body",
+      error,
     });
   }
   const user = await client.user.findUnique({

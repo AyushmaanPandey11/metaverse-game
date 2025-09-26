@@ -5,10 +5,11 @@ import client from "@repo/db/client";
 export const spaceRoutes = Router();
 
 spaceRoutes.post("/", validateUser, async (req: Request, res: Response) => {
-  const { success, data } = createSpaceSchema.safeParse(req.body);
+  const { success, data, error } = createSpaceSchema.safeParse(req.body);
   if (!success) {
     return res.status(404).json({
       message: "invalid body request",
+      error,
     });
   }
   // creating new map if mapId is not present
@@ -186,10 +187,11 @@ spaceRoutes.post(
   "/element",
   validateUser,
   async (req: Request, res: Response) => {
-    const { success, data } = addElementSchema.safeParse(req.body);
+    const { success, data, error } = addElementSchema.safeParse(req.body);
     if (!success) {
       return res.status(404).json({
         message: "invalid request body",
+        error,
       });
     }
 
