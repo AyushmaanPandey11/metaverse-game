@@ -13,8 +13,10 @@ export const validateUser = (
     if (!token) {
       throw new Error("Authorization token is missing.");
     }
+    // console.log(token);
     // const secretKey = process.env.JWT_SECRET as string;
     const decoded = jwt.verify(token, secretKey) as JwtPayload;
+    // console.log(decoded);
     if (!decoded.role) {
       return res.status(401).send("User role not found in token.");
     }
@@ -36,11 +38,10 @@ export const validateAdmin = (
       throw new Error("Authorization token is missing.");
     }
     const decoded = jwt.verify(token, secretKey) as JwtPayload;
-
     if (!decoded.role) {
       return res.status(401).send("User role not found in token.");
     }
-    if (decoded.role !== "admin") {
+    if (decoded.role !== "Admin") {
       return res.status(404).json({ message: "unAuthorized Access!" });
     }
     req.userId = decoded.userId;

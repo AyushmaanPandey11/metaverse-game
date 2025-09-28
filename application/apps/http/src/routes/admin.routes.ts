@@ -29,8 +29,9 @@ adminRoutes.post("/element", async (req: Request, res: Response) => {
   });
 });
 
-adminRoutes.put("/elements/:elementId", async (req: Request, res: Response) => {
-  const elementId = req.params as unknown as string;
+adminRoutes.put("/element/:elementId", async (req: Request, res: Response) => {
+  const elementId = req.params.elementId;
+  console.log("elementId: ", elementId);
   const { success, data } = updateElementSchema.safeParse(req.body);
   if (!success) {
     return res.status(404).json({ message: "invalid parameters" });

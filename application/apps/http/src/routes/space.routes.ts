@@ -1,5 +1,9 @@
 import { Request, Response, Router } from "express";
-import { addElementSchema, createSpaceSchema } from "../types";
+import {
+  addElementSchema,
+  createSpaceSchema,
+  deleteSpaceElement,
+} from "../types";
 import { validateUser } from "../middleware";
 import client from "@repo/db/client";
 export const spaceRoutes = Router();
@@ -37,7 +41,6 @@ spaceRoutes.post("/", validateUser, async (req: Request, res: Response) => {
       elements: true,
     },
   });
-
   if (!map) {
     return res.status(404).json({
       message: "map not found",
@@ -56,7 +59,7 @@ spaceRoutes.post("/", validateUser, async (req: Request, res: Response) => {
     await client.spaceElements.createMany({
       data: map.elements.map((ele) => ({
         spaceId: newSpace.id,
-        elementId: ele.id,
+        elementId: ele.elementId,
         x: ele.x,
         y: ele.y,
       })),
@@ -76,7 +79,39 @@ spaceRoutes.post("/", validateUser, async (req: Request, res: Response) => {
 });
 
 spaceRoutes.delete(
-  "/:spaceId",
+  "/element",
+  validateUser,
+  async (req: Request, res: Response) => {
+    const { success, data, error } = deleteSpaceElement.safeParse(req.body);
+    if (!success) {
+      return res.status(404).json({
+        message: "invalid req params",
+        error: error,
+      });
+    }
+    const space = await client.space.findUnique({
+      where: {
+        id: data.spaceId,
+      },
+    });
+
+    if (space?.creatorId !== req.userId!) {
+      return res.status(401).json({
+        message: "only creator can remove element",
+      });
+    }
+
+    await client.spaceElements.delete({
+      where: {
+        id: data.elementId,
+      },
+    });
+    return res.status(200).json({ message: "element deleted" });
+  }
+);
+
+spaceRoutes.delete(
+  "/byId/:spaceId",
   validateUser,
   async (req: Request, res: Response) => {
     const spaceId = req.params.spaceId;
@@ -114,63 +149,16 @@ spaceRoutes.delete(
   }
 );
 
-spaceRoutes.get(
-  "/:spaceId",
-  validateUser,
-  async (req: Request, res: Response) => {
-    const spaceId = req.params.spaceId;
-    if (!spaceId) {
-      return res.status(404).json({
-        message: "invalid spaceId",
-      });
-    }
-
-    const result = await client.space.findUnique({
-      where: {
-        id: spaceId,
-      },
-      include: {
-        elements: {
-          include: {
-            element: true,
-          },
-        },
-      },
-    });
-
-    if (!result) {
-      return res.status(404).json({
-        message: "space doesn't exist",
-      });
-    }
-
-    return res.status(200).json({
-      dimensions: `${result.width}x${result.height}`,
-      elements: result.elements.map((ele) => ({
-        id: ele.id,
-        element: {
-          id: ele.element.id,
-          imageUrl: ele.element.imageUrl,
-          static: ele.element.static,
-          height: ele.element.height,
-          width: ele.element.width,
-        },
-        x: ele.x,
-        y: ele.y,
-      })),
-    });
-  }
-);
-
 spaceRoutes.get("/all", validateUser, async (req: Request, res: Response) => {
   const spaces = await client.space.findMany({
     where: {
-      id: req.userId!,
+      creatorId: req.userId,
     },
   });
   if (spaces.length === 0) {
     return res.status(400).json({
       messasge: "no existing spaces",
+      spaces: [],
     });
   }
   return res.status(200).json({
@@ -179,6 +167,50 @@ spaceRoutes.get("/all", validateUser, async (req: Request, res: Response) => {
       name: sp.name,
       dimensions: `${sp.width}x${sp.height}`,
       thumbnail: sp.thumbnail,
+    })),
+  });
+});
+
+spaceRoutes.get("/:spaceId", async (req: Request, res: Response) => {
+  const spaceId = req.params.spaceId;
+  if (!spaceId) {
+    return res.status(404).json({
+      message: "invalid spaceId",
+    });
+  }
+
+  const result = await client.space.findUnique({
+    where: {
+      id: spaceId,
+    },
+    include: {
+      elements: {
+        include: {
+          element: true,
+        },
+      },
+    },
+  });
+
+  if (!result) {
+    return res.status(404).json({
+      message: "space doesn't exist",
+    });
+  }
+
+  return res.status(200).json({
+    dimensions: `${result.width}x${result.height}`,
+    elements: result.elements.map((ele) => ({
+      id: ele.id,
+      element: {
+        id: ele.element.id,
+        imageUrl: ele.element.imageUrl,
+        static: ele.element.static,
+        height: ele.element.height,
+        width: ele.element.width,
+      },
+      x: ele.x,
+      y: ele.y,
     })),
   });
 });

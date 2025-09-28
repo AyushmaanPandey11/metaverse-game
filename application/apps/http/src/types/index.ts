@@ -18,7 +18,7 @@ export const updateMetadataSchema = z.object({
 export const createSpaceSchema = z.object({
   name: z.string(),
   dimensions: z.string(),
-  mapId: z.string(),
+  mapId: z.string().optional(),
 });
 
 export const addElementSchema = z.object({
@@ -42,6 +42,11 @@ export const updateElementSchema = z.object({
 export const createAvatarSchema = z.object({
   imageUrl: z.string(),
   name: z.string(),
+});
+
+export const deleteSpaceElement = z.object({
+  spaceId: z.string(),
+  elementId: z.string(),
 });
 
 export const createMapSchema = z.object({
