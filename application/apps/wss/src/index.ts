@@ -1,7 +1,6 @@
 import express from "express";
 import { createServer } from "http";
-import WebSocket, { WebSocketServer } from "ws";
-import type { wsMessageType } from "./types";
+import { WebSocket, WebSocketServer } from "ws";
 import { User } from "./Classes/User";
 const app = express();
 const server = createServer(app);

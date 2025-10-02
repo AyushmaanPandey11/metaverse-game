@@ -24,6 +24,7 @@ export class User {
   private eventsHandler() {
     this.ws.on("message", async (data) => {
       const parsedData: wsMessageType = JSON.parse(data.toString());
+      const roomInstance = Room.getInstance();
       switch (parsedData.type) {
         case "join":
           const { spaceId, token } = parsedData.payload;
@@ -38,30 +39,33 @@ export class User {
             where: {
               id: spaceId,
             },
+            include: {
+              elements: {
+                select: {
+                  x: true,
+                  y: true,
+                },
+              },
+            },
           });
           if (!userSpace) {
             this.ws.close();
             return;
           }
           this.spaceId = spaceId;
-          const spaceWithElements = await client.spaceElements.findMany({
-            where: {
-              spaceId: this.spaceId,
-            },
-          });
           const roomUsers = Room.getInstance().spaces.get(spaceId) ?? [];
           const userCoords = roomUsers.map((user) => ({
             x: user.x,
             y: user.y,
           }));
-          const elementsCoords = spaceWithElements.map((ele) => ({
+          const elementsCoords = userSpace.elements.map((ele) => ({
             x: ele.x,
             y: ele.y,
           }));
           const spawnPoint = this.findNewUserCoordinates(
-            userSpace?.width!,
-            userSpace?.height!,
-            elementsCoords!,
+            userSpace.width,
+            userSpace.height,
+            elementsCoords,
             userCoords
           );
           if (!spawnPoint) {
@@ -71,7 +75,7 @@ export class User {
             this.x = spawnPoint.x;
             this.y = spawnPoint.y;
           }
-          Room.getInstance().addUser(this, spaceId);
+          roomInstance.addUser(this, spaceId);
           this.ws.send(
             JSON.stringify({
               type: "space-joined",
@@ -80,13 +84,15 @@ export class User {
                   x: this.x,
                   y: this.y,
                 },
-                users: Room.getInstance()
-                  .spaces.get(spaceId)
-                  ?.forEach((u) => u.id !== this.userId),
+                users:
+                  roomInstance.spaces
+                    .get(spaceId)
+                    ?.filter((u) => u.id !== this.userId)
+                    ?.map((u) => ({ id: u.id })) || [],
               },
             })
           );
-          Room.getInstance().publish(
+          roomInstance.publish(
             {
               type: "user-join",
               payload: {
@@ -100,6 +106,99 @@ export class User {
           );
           break;
 
+        case "move":
+          const { x, y } = parsedData.payload;
+          const xDisplacement = Math.abs(this.x - x);
+          const yDisplacement = Math.abs(this.y - y);
+          if (
+            (xDisplacement == 1 && yDisplacement == 0) ||
+            (xDisplacement == 0 && yDisplacement == 1)
+          ) {
+            const userSpace = await client.space.findUnique({
+              where: {
+                id: this.spaceId,
+              },
+              include: {
+                elements: {
+                  where: {
+                    element: {
+                      static: true,
+                    },
+                  },
+                  include: {
+                    element: {
+                      select: {
+                        height: true,
+                        width: true,
+                      },
+                    },
+                  },
+                },
+              },
+            });
+            if (!userSpace) {
+              this.ws.close();
+              return;
+            }
+            // should be within the space bounds
+            if (
+              x <= userSpace.width &&
+              x >= 0 &&
+              y >= 0 &&
+              y <= userSpace.height!
+            ) {
+              const spaceUsers = roomInstance.spaces.get(this.spaceId!);
+              const occupiedCoords = new Set<string>();
+              userSpace.elements.forEach((e) => {
+                const { x: startX, y: startY } = e;
+                const { width, height } = e.element;
+                for (let i = 0; i < width; i++) {
+                  for (let j = 0; j < height; j++) {
+                    occupiedCoords.add(`${startX + i},${startY + j}`);
+                  }
+                }
+              });
+              spaceUsers?.forEach((u) => occupiedCoords.add(`${u.x},${u.y}`));
+              if (!occupiedCoords.has(`${x},${y}`)) {
+                this.x = x;
+                this.y = y;
+                roomInstance.publish(
+                  {
+                    type: "movement",
+                    payload: {
+                      x: this.x,
+                      y: this.y,
+                      userId: this.userId!,
+                    },
+                  },
+                  this.userId!,
+                  this.spaceId!
+                );
+              } else {
+                this.ws.send(
+                  JSON.stringify({
+                    type: "movement-rejected",
+                    payload: {
+                      x: this.x,
+                      y: this.y,
+                    },
+                  })
+                );
+              }
+            }
+          } else {
+            // rejected case, can only take one step either of the axis
+            this.ws.send(
+              JSON.stringify({
+                type: "movement-rejected",
+                payload: {
+                  x: this.x,
+                  y: this.y,
+                },
+              })
+            );
+          }
+          break;
         default:
           break;
       }
@@ -131,8 +230,9 @@ export class User {
   }
 
   clearUser() {
-    Room.getInstance().removeUser(this, this.spaceId!);
-    Room.getInstance().publish(
+    const roomInstance = Room.getInstance();
+    roomInstance.removeUser(this, this.spaceId!);
+    roomInstance.publish(
       {
         type: "user-left",
         payload: {
