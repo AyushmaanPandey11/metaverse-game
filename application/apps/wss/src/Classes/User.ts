@@ -8,7 +8,7 @@ export const secretKey = "secretKey";
 export class User {
   public ws: WebSocket;
   public id: string;
-  public userId?: string;
+  private userId?: string;
   private spaceId?: string;
   private x: number;
   private y: number;
@@ -87,7 +87,7 @@ export class User {
                 users:
                   roomInstance.spaces
                     .get(spaceId)
-                    ?.filter((u) => u.userId !== this.userId)
+                    ?.filter((u) => u.id !== this.id)
                     ?.map((u) => ({ id: u.userId })) || [],
               },
             })
@@ -101,7 +101,7 @@ export class User {
                 y: this.y,
               },
             },
-            this.userId!,
+            this.id,
             this.spaceId
           );
           break;
@@ -171,7 +171,7 @@ export class User {
                       userId: this.userId!,
                     },
                   },
-                  this.userId!,
+                  this.id,
                   this.spaceId!
                 );
               } else {
@@ -239,7 +239,7 @@ export class User {
           userId: this.userId!,
         },
       },
-      this.userId!,
+      this.id,
       this.spaceId!
     );
   }

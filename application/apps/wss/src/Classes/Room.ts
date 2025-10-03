@@ -21,7 +21,7 @@ export class Room {
     if (!users) {
       return;
     }
-    const updateUsers = users.filter((usr) => user.userId !== usr.userId);
+    const updateUsers = users.filter((usr) => user.id !== usr.id);
     if (updateUsers.length === 0) {
       this.spaces.delete(spaceId);
     } else {
@@ -39,16 +39,12 @@ export class Room {
     this.spaces.set(spaceId, updatedUsers);
   }
 
-  public publish(
-    message: outGoingMessageType,
-    userId: string,
-    spaceId: string
-  ) {
+  public publish(message: outGoingMessageType, wsId: string, spaceId: string) {
     if (!this.spaces.get(spaceId)) {
       return;
     }
     this.spaces.get(spaceId)?.forEach((usr) => {
-      if (userId !== usr.userId) {
+      if (wsId !== usr.id) {
         usr.ws.send(JSON.stringify(message));
       }
     });
