@@ -2,7 +2,6 @@ import { WebSocket } from "ws";
 import { wsMessageType } from "../types";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { Room } from "./Room";
-import client from "@repo/db/client";
 export const secretKey = "secretKey";
 
 export class User {
