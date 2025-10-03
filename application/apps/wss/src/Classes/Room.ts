@@ -21,7 +21,7 @@ export class Room {
     if (!users) {
       return;
     }
-    const updateUsers = users.filter((usr) => user.id !== usr.id);
+    const updateUsers = users.filter((usr) => user.userId !== usr.userId);
     if (updateUsers.length === 0) {
       this.spaces.delete(spaceId);
     } else {
@@ -48,7 +48,7 @@ export class Room {
       return;
     }
     this.spaces.get(spaceId)?.forEach((usr) => {
-      if (userId !== usr.id) {
+      if (userId !== usr.userId) {
         usr.ws.send(JSON.stringify(message));
       }
     });

@@ -2,7 +2,6 @@ import { Request, Response, Router } from "express";
 import { signinSchema, signupSchema } from "../types";
 import client from "@repo/db/client";
 import bcrypt from "bcrypt";
-import { Role } from "../../../../packages/db/src/generated/prisma";
 import jwt from "jsonwebtoken";
 import { secretKey, validateUser } from "../middleware";
 

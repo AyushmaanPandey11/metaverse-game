@@ -1,14 +1,14 @@
 import { WebSocket } from "ws";
 import { wsMessageType } from "../types";
 import jwt, { JwtPayload } from "jsonwebtoken";
-import client from "@repo/db/src/index";
+import client from "@repo/db/client";
 import { Room } from "./Room";
 export const secretKey = "secretKey";
 
 export class User {
   public ws: WebSocket;
   public id: string;
-  private userId?: string;
+  public userId?: string;
   private spaceId?: string;
   private x: number;
   private y: number;
@@ -87,8 +87,8 @@ export class User {
                 users:
                   roomInstance.spaces
                     .get(spaceId)
-                    ?.filter((u) => u.id !== this.userId)
-                    ?.map((u) => ({ id: u.id })) || [],
+                    ?.filter((u) => u.userId !== this.userId)
+                    ?.map((u) => ({ id: u.userId })) || [],
               },
             })
           );
