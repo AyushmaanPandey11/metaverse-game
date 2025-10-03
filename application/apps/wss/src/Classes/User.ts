@@ -1,8 +1,8 @@
 import { WebSocket } from "ws";
 import { wsMessageType } from "../types";
 import jwt, { JwtPayload } from "jsonwebtoken";
-import client from "@repo/db/client";
 import { Room } from "./Room";
+import client from "@repo/db/client";
 export const secretKey = "secretKey";
 
 export class User {
@@ -35,24 +35,12 @@ export class User {
             return;
           }
           this.userId = userId;
-          const userSpace = await client.space.findFirst({
-            where: {
-              id: spaceId,
-            },
-            include: {
-              elements: {
-                select: {
-                  x: true,
-                  y: true,
-                },
-              },
-            },
-          });
+          this.spaceId = spaceId;
+          const userSpace = await roomInstance.getSpaceData(this.spaceId);
           if (!userSpace) {
             this.ws.close();
             return;
           }
-          this.spaceId = spaceId;
           const roomUsers = Room.getInstance().spaces.get(spaceId) ?? [];
           const userCoords = roomUsers.map((user) => ({
             x: user.x,
@@ -65,12 +53,12 @@ export class User {
           const spawnPoint = this.findNewUserCoordinates(
             userSpace.width,
             userSpace.height,
-            elementsCoords,
+            userSpace.elements,
             userCoords
           );
           if (!spawnPoint) {
             this.ws.close();
-            return null;
+            return;
           } else {
             this.x = spawnPoint.x;
             this.y = spawnPoint.y;
@@ -88,7 +76,7 @@ export class User {
                   roomInstance.spaces
                     .get(spaceId)
                     ?.filter((u) => u.id !== this.id)
-                    ?.map((u) => ({ id: u.userId })) || [],
+                    ?.map((u) => ({ id: u.userId! })) || [],
               },
             })
           );
@@ -107,6 +95,7 @@ export class User {
           break;
 
         case "move":
+          if (!this.spaceId) return;
           const { x, y } = parsedData.payload;
           const xDisplacement = Math.abs(this.x - x);
           const yDisplacement = Math.abs(this.y - y);
@@ -114,28 +103,7 @@ export class User {
             (xDisplacement == 1 && yDisplacement == 0) ||
             (xDisplacement == 0 && yDisplacement == 1)
           ) {
-            const userSpace = await client.space.findUnique({
-              where: {
-                id: this.spaceId,
-              },
-              include: {
-                elements: {
-                  where: {
-                    element: {
-                      static: true,
-                    },
-                  },
-                  include: {
-                    element: {
-                      select: {
-                        height: true,
-                        width: true,
-                      },
-                    },
-                  },
-                },
-              },
-            });
+            const userSpace = await roomInstance.getSpaceData(this.spaceId);
             if (!userSpace) {
               this.ws.close();
               return;
@@ -149,16 +117,14 @@ export class User {
             ) {
               const spaceUsers = roomInstance.spaces.get(this.spaceId!);
               const occupiedCoords = new Set<string>();
-              userSpace.elements.forEach((e) => {
-                const { x: startX, y: startY } = e;
-                const { width, height } = e.element;
-                for (let i = 0; i < width; i++) {
-                  for (let j = 0; j < height; j++) {
-                    occupiedCoords.add(`${startX + i},${startY + j}`);
-                  }
+              userSpace.occupiedStaticTiles.forEach((coord) =>
+                occupiedCoords.add(coord)
+              );
+              spaceUsers?.forEach((u) => {
+                if (u.id !== this.id) {
+                  occupiedCoords.add(`${u.x},${u.y}`);
                 }
               });
-              spaceUsers?.forEach((u) => occupiedCoords.add(`${u.x},${u.y}`));
               if (!occupiedCoords.has(`${x},${y}`)) {
                 this.x = x;
                 this.y = y;
@@ -208,14 +174,20 @@ export class User {
   private findNewUserCoordinates(
     width: number,
     height: number,
-    elements: { x: number; y: number }[],
+    elements: { x: number; y: number; width: number; height: number }[],
     otherUsers: { x: number; y: number }[]
   ): { x: number; y: number } | null {
     const occupiedCoords = new Set<string>();
-    elements.forEach((e) => occupiedCoords.add(`${e.x},${e.y}`));
+    elements.forEach((e) => {
+      for (let i = 0; i < e.width; i++) {
+        for (let j = 0; j < e.height; j++) {
+          occupiedCoords.add(`${e.x + i},${e.y + j}`);
+        }
+      }
+    });
     otherUsers.forEach((u) => occupiedCoords.add(`${u.x},${u.y}`));
 
-    const maxAttempts = width * height;
+    const maxAttempts = width * height * 2;
     let attempts = 0;
     while (attempts < maxAttempts) {
       const x = Math.floor(Math.random() * width);
@@ -230,17 +202,18 @@ export class User {
   }
 
   clearUser() {
+    if (!this.spaceId || !this.userId) return;
     const roomInstance = Room.getInstance();
     roomInstance.removeUser(this, this.spaceId!);
     roomInstance.publish(
       {
         type: "user-left",
         payload: {
-          userId: this.userId!,
+          userId: this.userId,
         },
       },
       this.id,
-      this.spaceId!
+      this.spaceId
     );
   }
 

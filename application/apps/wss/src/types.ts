@@ -61,3 +61,17 @@ export type outGoingMessageType =
         y: number;
       };
     };
+
+export interface SpaceElement {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface SpaceCache {
+  width: number;
+  height: number;
+  elements: SpaceElement[];
+  occupiedStaticTiles: Set<string>;
+}

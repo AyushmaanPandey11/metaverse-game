@@ -38,7 +38,7 @@ const axios = {
   },
 };
 
-describe.skip("User Authentication", () => {
+describe("User Authentication", () => {
   let username = `ayushmaan${Math.random()}`;
   let password = `ayushmaan123123`;
   test("user can create a account only once", async () => {
@@ -102,7 +102,7 @@ describe.skip("User Authentication", () => {
   });
 });
 
-describe.skip("User metadata", () => {
+describe("User metadata", () => {
   let token = "";
   let avatarId = "";
 
@@ -179,7 +179,7 @@ describe.skip("User metadata", () => {
   });
 });
 
-describe.skip("User Avatar endpoints", () => {
+describe("User Avatar endpoints", () => {
   let userId = "";
   let token = "";
   let avatarId = "";
@@ -250,7 +250,7 @@ describe.skip("User Avatar endpoints", () => {
   });
 });
 
-describe.skip("Space information", () => {
+describe("Space information", () => {
   let userId;
   let userToken;
   let adminId;
@@ -517,7 +517,7 @@ describe.skip("Space information", () => {
   });
 });
 
-describe.skip("Arena information", () => {
+describe("Arena information", () => {
   let userId;
   let userToken;
   let adminId;
@@ -727,7 +727,7 @@ describe.skip("Arena information", () => {
   });
 });
 
-describe.skip("admin endpoints tests", () => {
+describe("admin endpoints tests", () => {
   let userId;
   let userToken;
   let adminId;
