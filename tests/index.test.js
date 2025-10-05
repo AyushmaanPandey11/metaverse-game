@@ -1013,8 +1013,15 @@ describe("websocket testing for events", () => {
 
   const initializeWsServer = async () => {
     ws1 = new WebSocket(WS_URL);
-    await new Promise((resolve) => {
-      ws1.onopen = resolve;
+    await new Promise((resolve, reject) => {
+      ws1.onopen = () => {
+        ws1.onclose = null;
+        resolve(ws1);
+      };
+      ws1.onclose = () => {
+        ws1.onopen = null;
+        reject(new Error("connection failed"));
+      };
     });
 
     ws1.onmessage = (event) => {
@@ -1023,7 +1030,14 @@ describe("websocket testing for events", () => {
 
     ws2 = new WebSocket(WS_URL);
     await new Promise((resolve) => {
-      ws2.onopen = resolve;
+      ws2.onopen = () => {
+        ws2.onclose = null;
+        resolve(ws2);
+      };
+      ws2.onclose = () => {
+        ws2.onopen = null;
+        reject(new Error("connection failed"));
+      };
     });
 
     ws2.onmessage = (event) => {
