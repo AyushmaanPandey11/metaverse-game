@@ -1,47 +1,12 @@
 import React, { useState, useEffect } from "react";
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Navigate,
-  useNavigate,
-} from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./components/Login";
 import Signup from "./components/Signup";
 import UserDashboard from "./components/UserDashboard";
 import AdminDashboard from "./components/AdminDashboard";
 import SpaceView from "./components/SpaceView";
 import type { User } from "./types";
-
-const LandingPage: React.FC<{ setUser: (user: User | null) => void }> = () => {
-  const navigate = useNavigate();
-
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
-      <h1 className="text-4xl font-bold mb-8">Welcome to Virtual Space</h1>
-      <div className="flex space-x-4">
-        <button
-          onClick={() => navigate("/login")}
-          className="bg-blue-500 text-white p-3 rounded hover:bg-blue-600"
-        >
-          Login
-        </button>
-        <button
-          onClick={() => navigate("/signup")}
-          className="bg-green-500 text-white p-3 rounded hover:bg-green-600"
-        >
-          Sign Up
-        </button>
-        <button
-          onClick={() => navigate("/space/demo_space_id")}
-          className="bg-purple-500 text-white p-3 rounded hover:bg-purple-600"
-        >
-          Join Demo Arena
-        </button>
-      </div>
-    </div>
-  );
-};
+import LandingPage from "./Landing";
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
