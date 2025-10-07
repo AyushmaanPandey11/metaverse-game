@@ -16,6 +16,7 @@ const Signup: React.FC<SignupProps> = ({ setUser }) => {
 
   const handleSignup = async () => {
     const response = await signup(username, password, role);
+    console.log(response);
     if (response.status === 200) {
       const { token } = response.data;
       setUser({ token, role });
