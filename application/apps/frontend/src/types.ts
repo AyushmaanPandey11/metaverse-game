@@ -1,6 +1,6 @@
 export interface User {
   token: string;
-  role: "user" | "admin";
+  role: "User" | "Admin";
 }
 
 export interface Space {

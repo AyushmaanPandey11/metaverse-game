@@ -13,7 +13,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    const role = localStorage.getItem("role") as unknown as "admin" | "user";
+    const role = localStorage.getItem("role") as unknown as "Admin" | "User";
     if (token && role) {
       setUser({ token, role });
     }
@@ -27,7 +27,7 @@ const App: React.FC = () => {
         <Route
           path="/user"
           element={
-            user && user.role === "user" ? (
+            user && user.role === "User" ? (
               <UserDashboard user={user} />
             ) : (
               <Navigate to="/login" />
@@ -37,7 +37,7 @@ const App: React.FC = () => {
         <Route
           path="/admin"
           element={
-            user && user.role === "admin" ? (
+            user && user.role === "Admin" ? (
               <AdminDashboard user={user} />
             ) : (
               <Navigate to="/login" />

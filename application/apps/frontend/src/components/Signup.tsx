@@ -7,10 +7,10 @@ interface SignupProps {
   setUser: (user: User) => void;
 }
 
-const Signup: React.FC<SignupProps> = ({ setUser }) => {
+const Signup: React.FC<SignupProps> = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"user" | "admin">("user");
+  const [role, setRole] = useState<"User" | "Admin">("User");
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
@@ -18,11 +18,9 @@ const Signup: React.FC<SignupProps> = ({ setUser }) => {
     const response = await signup(username, password, role);
     console.log(response);
     if (response.status === 200) {
-      const { token } = response.data;
-      setUser({ token, role });
-      localStorage.setItem("token", token);
-      localStorage.setItem("role", role);
-      navigate(role === "admin" ? "/admin" : "/user");
+      const { userId } = response.data;
+      localStorage.setItem("userId", userId);
+      navigate("/login");
     } else {
       setError("Signup failed");
     }
@@ -55,7 +53,7 @@ const Signup: React.FC<SignupProps> = ({ setUser }) => {
           <label className="block text-gray-700">Role</label>
           <select
             value={role}
-            onChange={(e) => setRole(e.target.value as "user" | "admin")}
+            onChange={(e) => setRole(e.target.value as "User" | "Admin")}
             className="w-full p-2 border rounded"
           >
             <option value="user">User</option>

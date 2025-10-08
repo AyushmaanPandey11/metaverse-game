@@ -14,6 +14,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user }) => {
   const [dimensions, setDimensions] = useState("");
   const [mapId, setMapId] = useState("");
   const [selectedAvatar, setSelectedAvatar] = useState("");
+  const [activeSection, setActiveSection] = useState("Select Avatar");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -52,91 +53,132 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user }) => {
     }
   };
 
+  const sections = ["Create Space", "Select Avatar", "Your Spaces"];
+
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">User Dashboard</h1>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex">
+      {/* Vertical Navbar */}
+      <div className="w-64 bg-gray-800 text-white flex flex-col shadow-lg">
+        <div className="p-6">
+          <h1 className="text-2xl font-bold tracking-tight">User Dashboard</h1>
+        </div>
+        <nav className="flex-1">
+          {sections.map((section) => (
+            <button
+              key={section}
+              onClick={() => setActiveSection(section)}
+              className={`w-full text-left py-3 px-6 text-lg transition-colors duration-200 ${
+                activeSection === section
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-300 hover:bg-gray-700"
+              }`}
+            >
+              {section}
+            </button>
+          ))}
+        </nav>
         <button
           onClick={() => {
             localStorage.clear();
             navigate("/login");
           }}
-          className="bg-red-500 text-white p-2 rounded hover:bg-red-600 mb-6"
+          className="m-6 bg-red-500 text-white py-3 px-6 rounded-lg hover:bg-red-600 transition-all duration-300"
         >
           Logout
         </button>
+      </div>
 
-        <div className="bg-white p-6 rounded shadow-md mb-6">
-          <h2 className="text-xl font-bold mb-4">Create Space</h2>
-          <input
-            type="text"
-            placeholder="Space Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full p-2 border rounded mb-4"
-          />
-          <input
-            type="text"
-            placeholder="Dimensions (e.g., 100x200)"
-            value={dimensions}
-            onChange={(e) => setDimensions(e.target.value)}
-            className="w-full p-2 border rounded mb-4"
-          />
-          <input
-            type="text"
-            placeholder="Map ID (optional)"
-            value={mapId}
-            onChange={(e) => setMapId(e.target.value)}
-            className="w-full p-2 border rounded mb-4"
-          />
-          <button
-            onClick={handleCreateSpace}
-            className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-          >
-            Create Space
-          </button>
-        </div>
-
-        <div className="bg-white p-6 rounded shadow-md mb-6">
-          <h2 className="text-xl font-bold mb-4">Select Avatar</h2>
-          <select
-            value={selectedAvatar}
-            onChange={(e) => setSelectedAvatar(e.target.value)}
-            className="w-full p-2 border rounded mb-4"
-          >
-            <option value="">Select an avatar</option>
-            {avatars.map((avatar) => (
-              <option key={avatar.id} value={avatar.id}>
-                {avatar.name}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={handleAvatarUpdate}
-            className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-          >
-            Update Avatar
-          </button>
-        </div>
-
-        <div className="bg-white p-6 rounded shadow-md">
-          <h2 className="text-xl font-bold mb-4">Your Spaces</h2>
-          {spaces.map((space) => (
-            <div
-              key={space.id}
-              className="flex justify-between items-center mb-2"
-            >
-              <span>
-                {space.name} ({space.dimensions})
-              </span>
+      {/* Content Area */}
+      <div className="flex-1 p-8 overflow-auto">
+        <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-md p-8 animate-fade-in">
+          {activeSection === "Create Space" && (
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-6">
+                Create Space
+              </h2>
+              <input
+                type="text"
+                placeholder="Space Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Dimensions (e.g., 100x200)"
+                value={dimensions}
+                onChange={(e) => setDimensions(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Map ID (optional)"
+                value={mapId}
+                onChange={(e) => setMapId(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
               <button
-                onClick={() => navigate(`/space/${space.id}`)}
-                className="bg-green-500 text-white p-2 rounded hover:bg-green-600"
+                onClick={handleCreateSpace}
+                className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transform hover:scale-105 transition-all duration-300"
               >
-                View Space
+                Create Space
               </button>
             </div>
-          ))}
+          )}
+
+          {activeSection === "Select Avatar" && (
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-6">
+                Select Avatar
+              </h2>
+              <select
+                value={selectedAvatar}
+                onChange={(e) => setSelectedAvatar(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select an avatar</option>
+                {avatars.map((avatar) => (
+                  <option key={avatar.id} value={avatar.id}>
+                    {avatar.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleAvatarUpdate}
+                className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transform hover:scale-105 transition-all duration-300"
+              >
+                Update Avatar
+              </button>
+            </div>
+          )}
+
+          {activeSection === "Your Spaces" && (
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-6">
+                Your Spaces
+              </h2>
+              {spaces.length === 0 ? (
+                <p className="text-gray-600">No spaces available.</p>
+              ) : (
+                spaces.map((space) => (
+                  <div
+                    key={space.id}
+                    className="flex justify-between items-center mb-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                  >
+                    <span className="text-gray-700">
+                      {space.name} ({space.dimensions})
+                    </span>
+                    <button
+                      onClick={() => navigate(`/space/${space.id}`)}
+                      className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-all duration-300"
+                    >
+                      View Space
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

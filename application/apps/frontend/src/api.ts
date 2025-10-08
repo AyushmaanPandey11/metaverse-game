@@ -41,12 +41,12 @@ export const api = {
 export const signup = async (
   username: string,
   password: string,
-  role: "user" | "admin"
+  role: "User" | "Admin"
 ) => {
   return api.post(`${BACKEND_URL}/api/v1/user/signup`, {
     username,
     password,
-    role,
+    role: role === "User" ? "user" : "admin",
   });
 };
 
@@ -64,6 +64,10 @@ export const updateAvatar = async (avatarId: string, token: string) => {
 
 export const getAvatars = async () => {
   return api.get(`${BACKEND_URL}/api/v1/user/metadata/avatars`);
+};
+
+export const getMaps = async () => {
+  return api.get(`${BACKEND_URL}/api/v1/map/all`);
 };
 
 export const createSpace = async (

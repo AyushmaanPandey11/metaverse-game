@@ -17,10 +17,11 @@ const Login: React.FC<LoginProps> = ({ setUser }) => {
     const response = await signin(username, password);
     if (response.status === 200) {
       const { token } = response.data;
-      setUser({ token, role: response.data.role || "user" });
+      console.log(response.data);
+      setUser({ token, role: response.data.role });
       localStorage.setItem("token", token);
-      localStorage.setItem("role", response.data.role || "user");
-      navigate(response.data.role === "admin" ? "/admin" : "/user");
+      localStorage.setItem("role", response.data.role);
+      navigate(response.data.role === "Admin" ? "/admin" : "/user");
     } else {
       setError("Invalid credentials");
     }

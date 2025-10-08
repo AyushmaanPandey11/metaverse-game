@@ -76,6 +76,7 @@ userRoutes.post("/signin", async (req: Request, res: Response) => {
 
   return res.status(200).json({
     token,
+    role: user.role,
   });
 });
 
