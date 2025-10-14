@@ -15,6 +15,13 @@ export type wsMessageType =
         x: number;
         y: number;
       };
+    }
+  | {
+      type: "chat";
+      payload: {
+        otherUsers: string[];
+        message: string;
+      };
     };
 
 export type outGoingMessageType =

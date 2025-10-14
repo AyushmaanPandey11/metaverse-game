@@ -161,6 +161,31 @@ export class User {
               );
             }
             break;
+
+          case "chat":
+            if (!this.spaceId) return;
+            const { otherUsers, message } = parsedData.payload;
+            if (!roomInstance.spaces.get(this.spaceId)) {
+              return;
+            }
+            const users = roomInstance.spaces
+              .get(this.spaceId)
+              ?.filter(
+                (u) => u.id !== this.id && otherUsers.includes(u.userId!)
+              ) as unknown as User[];
+
+            users.forEach((u) => {
+              u.ws.send(
+                JSON.stringify({
+                  type: "chat-message",
+                  payload: {
+                    userId: this.userId,
+                    message: message,
+                  },
+                })
+              );
+            });
+            break;
           default:
             break;
         }

@@ -7,6 +7,7 @@ import {
   getSpaces,
   getMaps,
 } from "../api";
+import { ImagePreview } from "./ImagePreview";
 import type { User, Space } from "../types";
 
 interface Map {
@@ -139,42 +140,70 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
 
       {/* Content Area */}
       <div className="flex-1 p-8 overflow-auto">
-        <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-md p-8 animate-fade-in">
+        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-md p-8 animate-fade-in">
           {activeSection === "Create Element" && (
             <div>
               <h2 className="text-2xl font-bold text-gray-800 mb-6">
                 Create Element
               </h2>
-              <input
-                type="text"
-                placeholder="Image URL"
-                value={elementImageUrl}
-                onChange={(e) => setElementImageUrl(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="number"
-                placeholder="Width"
-                value={elementWidth}
-                onChange={(e) => setElementWidth(Number(e.target.value))}
-                className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="number"
-                placeholder="Height"
-                value={elementHeight}
-                onChange={(e) => setElementHeight(Number(e.target.value))}
-                className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <label className="flex items-center mb-4">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Image URL
+                </label>
+                <div className="flex items-end space-x-4">
+                  <input
+                    type="text"
+                    placeholder="Enter image URL"
+                    value={elementImageUrl}
+                    onChange={(e) => setElementImageUrl(e.target.value)}
+                    className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <ImagePreview
+                    imageUrl={elementImageUrl}
+                    altText="Element Preview"
+                    size="w-20 h-20"
+                  />
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Width
+                </label>
                 <input
-                  type="checkbox"
-                  checked={elementStatic}
-                  onChange={(e) => setElementStatic(e.target.checked)}
-                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                  type="number"
+                  placeholder="Width"
+                  value={elementWidth}
+                  onChange={(e) => setElementWidth(Number(e.target.value))}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <span className="ml-2 text-gray-700">Static</span>
-              </label>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Height
+                </label>
+                <input
+                  type="number"
+                  placeholder="Height"
+                  value={elementHeight}
+                  onChange={(e) => setElementHeight(Number(e.target.value))}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="mb-6">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={elementStatic}
+                    onChange={(e) => setElementStatic(e.target.checked)}
+                    className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-gray-700">Static</span>
+                </label>
+              </div>
+
               <button
                 onClick={handleCreateElement}
                 className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transform hover:scale-105 transition-all duration-300"
@@ -189,20 +218,39 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
               <h2 className="text-2xl font-bold text-gray-800 mb-6">
                 Create Avatar
               </h2>
-              <input
-                type="text"
-                placeholder="Image URL"
-                value={avatarImageUrl}
-                onChange={(e) => setAvatarImageUrl(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="Avatar Name"
-                value={avatarName}
-                onChange={(e) => setAvatarName(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Image URL
+                </label>
+                <div className="flex items-end space-x-4">
+                  <input
+                    type="text"
+                    placeholder="Enter image URL"
+                    value={avatarImageUrl}
+                    onChange={(e) => setAvatarImageUrl(e.target.value)}
+                    className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <ImagePreview
+                    imageUrl={avatarImageUrl}
+                    altText="Avatar Preview"
+                    size="w-20 h-20"
+                  />
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Avatar Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="Avatar Name"
+                  value={avatarName}
+                  onChange={(e) => setAvatarName(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
               <button
                 onClick={handleCreateAvatar}
                 className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transform hover:scale-105 transition-all duration-300"
@@ -217,27 +265,52 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
               <h2 className="text-2xl font-bold text-gray-800 mb-6">
                 Create Map
               </h2>
-              <input
-                type="text"
-                placeholder="Map Name"
-                value={mapName}
-                onChange={(e) => setMapName(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="Thumbnail URL"
-                value={mapThumbnail}
-                onChange={(e) => setMapThumbnail(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="Dimensions (e.g., 100x200)"
-                value={mapDimensions}
-                onChange={(e) => setMapDimensions(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Map Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="Map Name"
+                  value={mapName}
+                  onChange={(e) => setMapName(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Thumbnail URL
+                </label>
+                <div className="flex items-end space-x-4">
+                  <input
+                    type="text"
+                    placeholder="Enter thumbnail URL"
+                    value={mapThumbnail}
+                    onChange={(e) => setMapThumbnail(e.target.value)}
+                    className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <ImagePreview
+                    imageUrl={mapThumbnail}
+                    altText="Map Thumbnail Preview"
+                    size="w-20 h-20"
+                  />
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Dimensions (e.g., 100x200)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Dimensions (e.g., 100x200)"
+                  value={mapDimensions}
+                  onChange={(e) => setMapDimensions(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
               <button
                 onClick={handleCreateMap}
                 className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transform hover:scale-105 transition-all duration-300"

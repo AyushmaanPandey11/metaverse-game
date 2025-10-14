@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { createSpace, getSpaces, getAvatars, updateAvatar } from "../api";
 import type { User, Space, Avatar } from "../types";
+import { ImagePreview } from "./ImagePreview";
 
 interface UserDashboardProps {
   user: User;
@@ -90,33 +91,55 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user }) => {
 
       {/* Content Area */}
       <div className="flex-1 p-8 overflow-auto">
-        <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-md p-8 animate-fade-in">
+        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-md p-8 animate-fade-in">
           {activeSection === "Create Space" && (
             <div>
               <h2 className="text-2xl font-bold text-gray-800 mb-6">
                 Create Space
               </h2>
-              <input
-                type="text"
-                placeholder="Space Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="Dimensions (e.g., 100x200)"
-                value={dimensions}
-                onChange={(e) => setDimensions(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="Map ID (optional)"
-                value={mapId}
-                onChange={(e) => setMapId(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Space Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="Space Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Dimensions (e.g., 100x200)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Dimensions (e.g., 100x200)"
+                  value={dimensions}
+                  onChange={(e) => setDimensions(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Map Image URL (optional)
+                </label>
+                <div className="flex items-end space-x-4">
+                  <input
+                    type="text"
+                    placeholder="Enter map image URL (optional)"
+                    value={mapId}
+                    onChange={(e) => setMapId(e.target.value)}
+                    className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <ImagePreview
+                    imageUrl={mapId}
+                    altText="Map Preview"
+                    size="w-20 h-20"
+                  />
+                </div>
+              </div>
               <button
                 onClick={handleCreateSpace}
                 className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transform hover:scale-105 transition-all duration-300"
