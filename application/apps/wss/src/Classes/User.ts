@@ -171,7 +171,11 @@ export class User {
             const users = roomInstance.spaces
               .get(this.spaceId)
               ?.filter(
-                (u) => u.id !== this.id && otherUsers.includes(u.userId!)
+                (u) =>
+                  u.id !== this.id &&
+                  otherUsers.includes(u.userId!) &&
+                  Math.abs(u.x - this.x) <= 1 &&
+                  Math.abs(u.y - this.y) <= 1
               ) as unknown as User[];
 
             users.forEach((u) => {
