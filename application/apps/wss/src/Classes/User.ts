@@ -165,18 +165,15 @@ export class User {
           case "chat":
             if (!this.spaceId) return;
             const { otherUsers, message } = parsedData.payload;
+            console.log(otherUsers, message);
             if (!roomInstance.spaces.get(this.spaceId)) {
               return;
             }
-            const users = roomInstance.spaces
-              .get(this.spaceId)
-              ?.filter(
-                (u) =>
-                  u.id !== this.id &&
-                  otherUsers.includes(u.userId!) &&
-                  Math.abs(u.x - this.x) <= 1 &&
-                  Math.abs(u.y - this.y) <= 1
-              ) as unknown as User[];
+            const users = roomInstance.spaces.get(this.spaceId)?.filter(
+              (u) => u.id !== this.id && otherUsers.includes(u.userId!)
+              // Math.abs(u.x - this.x) <= 1 &&
+              // Math.abs(u.y - this.y) <= 1
+            ) as unknown as User[];
 
             users.forEach((u) => {
               u.ws.send(

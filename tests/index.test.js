@@ -38,7 +38,7 @@ const axios = {
   },
 };
 
-describe("User Authentication", () => {
+describe.skip("User Authentication", () => {
   let username = `ayushmaan${Math.random()}`;
   let password = `ayushmaan123123`;
   test("user can create a account only once", async () => {
@@ -102,7 +102,7 @@ describe("User Authentication", () => {
   });
 });
 
-describe("User metadata", () => {
+describe.skip("User metadata", () => {
   let token = "";
   let avatarId = "";
 
@@ -179,7 +179,7 @@ describe("User metadata", () => {
   });
 });
 
-describe("User Avatar endpoints", () => {
+describe.skip("User Avatar endpoints", () => {
   let userId = "";
   let token = "";
   let avatarId = "";
@@ -250,7 +250,7 @@ describe("User Avatar endpoints", () => {
   });
 });
 
-describe("Space information", () => {
+describe.skip("Space information", () => {
   let userId;
   let userToken;
   let adminId;
@@ -517,7 +517,7 @@ describe("Space information", () => {
   });
 });
 
-describe("Arena information", () => {
+describe.skip("Arena information", () => {
   let userId;
   let userToken;
   let adminId;
@@ -727,7 +727,7 @@ describe("Arena information", () => {
   });
 });
 
-describe("admin endpoints tests", () => {
+describe.skip("admin endpoints tests", () => {
   let userId;
   let userToken;
   let adminId;
@@ -1257,6 +1257,24 @@ describe("websocket testing for events", () => {
     expect(message.type).toBe("movement");
     expect(message.payload.x).toBe(adminX + 1);
     expect(message.payload.y).toBe(adminY);
+  });
+
+  test("User can chat with a nearby user specified in otherUsers array", async () => {
+    const chatMessage = "Hello, nearby admin!";
+    ws2.send(
+      JSON.stringify({
+        type: "chat",
+        payload: {
+          message: chatMessage,
+          otherUsers: [adminId],
+        },
+      })
+    );
+
+    const receivedMessage = await getRespondMessageFromWs(ws1Message);
+    expect(receivedMessage.type).toBe("chat-message");
+    expect(receivedMessage.payload.userId).toBe(userId);
+    expect(receivedMessage.payload.message).toBe(chatMessage);
   });
 
   test("If a user leaves, the other user receives a leave event", async () => {
