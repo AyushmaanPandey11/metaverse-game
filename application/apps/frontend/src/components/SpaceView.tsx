@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   getSpace,
@@ -20,214 +20,18 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
     y: 0,
   });
   const [users, setUsers] = useState<
-    { userId: string; x: number; y: number }[]
+    { userId: string; x: number; y: number; direction: string }[]
   >([]);
+  const [currentDirection, setCurrentDirection] = useState<string>("right");
   const wsRef = useRef<WebSocket | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const navigate = useNavigate();
 
-  // Arena state and refs
-  const arenaCanvasRef = useRef<any>(null);
-  const arenaWsRef = useRef<any>(null);
-  const [arenaCurrentUser, setArenaCurrentUser] = useState<any>({});
-  const [arenaUsers, setArenaUsers] = useState(new Map());
-  const [arenaParams, setArenaParams] = useState({ token: "", spaceId: "" });
-
-  // Initialize Arena WebSocket connection when no spaceId is provided
-  useEffect(() => {
-    if (spaceId === "demo") {
-      const urlParams = new URLSearchParams(window.location.search);
-      const token = urlParams.get("token") || user?.token || "";
-      const arenaSpaceId = urlParams.get("spaceId") || "arena";
-      setArenaParams({ token, spaceId: arenaSpaceId });
-
-      // Initialize WebSocket
-      arenaWsRef.current = new WebSocket("ws://localhost:3001"); // Replace with your WS_URL
-
-      arenaWsRef.current.onopen = () => {
-        // Join the space once connected
-        arenaWsRef.current.send(
-          JSON.stringify({
-            type: "join",
-            payload: {
-              spaceId: arenaSpaceId,
-              token,
-            },
-          })
-        );
-      };
-
-      arenaWsRef.current.onmessage = (event: any) => {
-        const message = JSON.parse(event.data);
-        handleArenaWebSocketMessage(message);
-      };
-
-      return () => {
-        if (arenaWsRef.current) {
-          arenaWsRef.current.close();
-        }
-      };
-    }
-  }, [spaceId, user?.token]);
-
-  const handleArenaWebSocketMessage = (message: any) => {
-    switch (message.type) {
-      case "space-joined":
-        setArenaCurrentUser({
-          x: message.payload.spawn.x,
-          y: message.payload.spawn.y,
-          userId: message.payload.userId,
-        });
-
-        // Initialize other users from the payload
-        const userMap = new Map();
-        message.payload.users.forEach((user: any) => {
-          userMap.set(user.userId, user);
-        });
-        setArenaUsers(userMap);
-        break;
-
-      case "user-joined":
-        setArenaUsers((prev) => {
-          const newUsers = new Map(prev);
-          newUsers.set(message.payload.userId, {
-            x: message.payload.x,
-            y: message.payload.y,
-            userId: message.payload.userId,
-          });
-          return newUsers;
-        });
-        break;
-
-      case "movement":
-        setArenaUsers((prev) => {
-          const newUsers = new Map(prev);
-          const user = newUsers.get(message.payload.userId);
-          if (user) {
-            user.x = message.payload.x;
-            user.y = message.payload.y;
-            newUsers.set(message.payload.userId, user);
-          }
-          return newUsers;
-        });
-        break;
-
-      case "movement-rejected":
-        // Reset current user position if movement was rejected
-        setArenaCurrentUser((prev: any) => ({
-          ...prev,
-          x: message.payload.x,
-          y: message.payload.y,
-        }));
-        break;
-
-      case "user-left":
-        setArenaUsers((prev) => {
-          const newUsers = new Map(prev);
-          newUsers.delete(message.payload.userId);
-          return newUsers;
-        });
-        break;
-    }
-  };
-
-  // Handle arena user movement
-  const handleArenaMove = (newX: any, newY: any) => {
-    if (!arenaCurrentUser) return;
-
-    // Send movement request
-    arenaWsRef.current.send(
-      JSON.stringify({
-        type: "move",
-        payload: {
-          x: newX,
-          y: newY,
-          userId: arenaCurrentUser.userId,
-        },
-      })
-    );
-  };
-
-  // Draw the arena
-  useEffect(() => {
-    if (!spaceId) {
-      const canvas = arenaCanvasRef.current;
-      if (!canvas) return;
-
-      const ctx = canvas.getContext("2d");
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Draw grid
-      ctx.strokeStyle = "#eee";
-      for (let i = 0; i < canvas.width; i += 50) {
-        ctx.beginPath();
-        ctx.moveTo(i, 0);
-        ctx.lineTo(i, canvas.height);
-        ctx.stroke();
-      }
-      for (let i = 0; i < canvas.height; i += 50) {
-        ctx.beginPath();
-        ctx.moveTo(0, i);
-        ctx.lineTo(canvas.width, i);
-        ctx.stroke();
-      }
-
-      // Draw current user
-      if (arenaCurrentUser && arenaCurrentUser.x) {
-        ctx.beginPath();
-        ctx.fillStyle = "#FF6B6B";
-        ctx.arc(
-          arenaCurrentUser.x * 50,
-          arenaCurrentUser.y * 50,
-          20,
-          0,
-          Math.PI * 2
-        );
-        ctx.fill();
-        ctx.fillStyle = "#000";
-        ctx.font = "14px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(
-          "You",
-          arenaCurrentUser.x * 50,
-          arenaCurrentUser.y * 50 + 40
-        );
-      }
-
-      // Draw other users
-      arenaUsers.forEach((user) => {
-        if (!user.x) return;
-        ctx.beginPath();
-        ctx.fillStyle = "#4ECDC4";
-        ctx.arc(user.x * 50, user.y * 50, 20, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "#000";
-        ctx.font = "14px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(`User ${user.userId}`, user.x * 50, user.y * 50 + 40);
-      });
-    }
-  }, [arenaCurrentUser, arenaUsers, spaceId]);
-
-  const handleArenaKeyDown = (e: any) => {
-    if (!spaceId && arenaCurrentUser) {
-      const { x, y } = arenaCurrentUser;
-      switch (e.key) {
-        case "ArrowUp":
-          handleArenaMove(x, y - 1);
-          break;
-        case "ArrowDown":
-          handleArenaMove(x, y + 1);
-          break;
-        case "ArrowLeft":
-          handleArenaMove(x - 1, y);
-          break;
-        case "ArrowRight":
-          handleArenaMove(x + 1, y);
-          break;
-      }
-    }
-  };
+  // Grid configuration
+  const GRID_SIZE = 40; // Size of each grid cell in pixels
+  const CANVAS_WIDTH = 800;
+  const CANVAS_HEIGHT = 600;
+  const PACMAN_RADIUS = 15; // Radius of Pacman
 
   // Original SpaceView logic (only when spaceId exists)
   useEffect(() => {
@@ -245,7 +49,12 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
         const message = JSON.parse(event.data);
         if (message.type === "space-joined") {
           setUserPosition(message.payload.spawn);
-          setUsers(message.payload.users);
+          setUsers(
+            message.payload.users.map((u: any) => ({
+              ...u,
+              direction: "right",
+            }))
+          );
         } else if (message.type === "user-join") {
           setUsers((prev) => [
             ...prev,
@@ -253,6 +62,7 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
               userId: message.payload.userId,
               x: message.payload.x,
               y: message.payload.y,
+              direction: "right",
             },
           ]);
         } else if (message.type === "user-left") {
@@ -276,14 +86,41 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
     }
   }, [spaceId, user?.token]);
 
+  // Draw chessboard grid and Pacman users
   useEffect(() => {
-    if (spaceId) {
+    if (spaceId && spaceId !== "demo") {
       const canvas = canvasRef.current;
-      if (canvas && space) {
+      if (canvas) {
         const ctx = canvas.getContext("2d");
         if (ctx) {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
-          space.elements.forEach((element) => {
+
+          // Draw chessboard grid
+          const rows = Math.floor(CANVAS_HEIGHT / GRID_SIZE);
+          const cols = Math.floor(CANVAS_WIDTH / GRID_SIZE);
+
+          for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+              const x = col * GRID_SIZE;
+              const y = row * GRID_SIZE;
+
+              // Chessboard pattern
+              if ((row + col) % 2 === 0) {
+                ctx.fillStyle = "#f0d9b5"; // Light square
+              } else {
+                ctx.fillStyle = "#b58863"; // Dark square
+              }
+              ctx.fillRect(x, y, GRID_SIZE, GRID_SIZE);
+
+              // Grid lines
+              ctx.strokeStyle = "#000";
+              ctx.lineWidth = 1;
+              ctx.strokeRect(x, y, GRID_SIZE, GRID_SIZE);
+            }
+          }
+
+          // Draw space elements
+          space?.elements.forEach((element) => {
             const img = new Image();
             img.src = element.element.imageUrl;
             img.onload = () => {
@@ -296,47 +133,141 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
               );
             };
           });
+
+          // Draw other users as Pacman
           users.forEach((u) => {
-            ctx.fillStyle = "blue";
-            ctx.fillRect(u.x, u.y, 10, 10);
+            drawPacman(
+              ctx,
+              u.x,
+              u.y,
+              u.direction || "right",
+              "#4ECDC4",
+              `User ${u.userId}`
+            );
           });
-          ctx.fillStyle = "red";
-          ctx.fillRect(userPosition.x, userPosition.y, 10, 10);
+
+          // Draw current user as Pacman
+          drawPacman(
+            ctx,
+            userPosition.x,
+            userPosition.y,
+            currentDirection,
+            "#FFD700",
+            "You"
+          );
         }
       }
     }
-  }, [space, users, userPosition, spaceId]);
+  }, [space, users, userPosition, currentDirection, spaceId]);
 
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (spaceId) {
-      let newX = userPosition.x;
-      let newY = userPosition.y;
-      if (e.key === "ArrowUp") newY -= 1;
-      if (e.key === "ArrowDown") newY += 1;
-      if (e.key === "ArrowLeft") newX -= 1;
-      if (e.key === "ArrowRight") newX += 1;
+  // Function to draw Pacman
+  const drawPacman = (
+    ctx: CanvasRenderingContext2D,
+    gridX: number,
+    gridY: number,
+    direction: string,
+    color: string,
+    label: string
+  ) => {
+    const x = gridX * GRID_SIZE + GRID_SIZE / 2;
+    const y = gridY * GRID_SIZE + GRID_SIZE / 2;
 
-      wsRef.current?.send(
-        JSON.stringify({
-          type: "move",
-          payload: { x: newX, y: newY },
-        })
-      );
-      setUserPosition({ x: newX, y: newY });
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Rotate based on direction
+    switch (direction) {
+      case "up":
+        ctx.rotate(-Math.PI / 2);
+        break;
+      case "down":
+        ctx.rotate(Math.PI / 2);
+        break;
+      case "left":
+        ctx.rotate(Math.PI);
+        break;
+      case "right":
+      default:
+        // No rotation needed for right
+        break;
     }
+
+    // Draw Pacman body (open mouth)
+    ctx.beginPath();
+    ctx.fillStyle = color;
+    ctx.arc(0, 0, PACMAN_RADIUS, Math.PI / 6, (11 * Math.PI) / 6);
+    ctx.lineTo(0, 0);
+    ctx.fill();
+
+    // Draw Pacman eye
+    ctx.beginPath();
+    ctx.fillStyle = "#000";
+    ctx.arc(
+      PACMAN_RADIUS * 0.3,
+      -PACMAN_RADIUS * 0.5,
+      PACMAN_RADIUS * 0.2,
+      0,
+      Math.PI * 2
+    );
+    ctx.fill();
+
+    ctx.restore();
+
+    // Draw user label
+    ctx.fillStyle = "#000";
+    ctx.font = "12px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(label, x, y + PACMAN_RADIUS + 20);
   };
 
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (spaceId && spaceId !== "demo") {
+        let newX = userPosition.x;
+        let newY = userPosition.y;
+        let direction = currentDirection;
+
+        if (e.key === "ArrowUp") {
+          newY -= 1;
+          direction = "up";
+        } else if (e.key === "ArrowDown") {
+          newY += 1;
+          direction = "down";
+        } else if (e.key === "ArrowLeft") {
+          newX -= 1;
+          direction = "left";
+        } else if (e.key === "ArrowRight") {
+          newX += 1;
+          direction = "right";
+        }
+
+        // Ensure movement stays within canvas bounds
+        const maxX = Math.floor(CANVAS_WIDTH / GRID_SIZE) - 1;
+        const maxY = Math.floor(CANVAS_HEIGHT / GRID_SIZE) - 1;
+        newX = Math.max(0, Math.min(newX, maxX));
+        newY = Math.max(0, Math.min(newY, maxY));
+
+        // Update direction
+        setCurrentDirection(direction);
+
+        wsRef.current?.send(
+          JSON.stringify({
+            type: "move",
+            payload: { x: newX, y: newY },
+          })
+        );
+        setUserPosition({ x: newX, y: newY });
+      }
+    },
+    [currentDirection, spaceId, userPosition]
+  );
+
   useEffect(() => {
-    window.addEventListener(
-      "keydown",
-      spaceId ? handleKeyDown : handleArenaKeyDown
-    );
-    return () =>
-      window.removeEventListener(
-        "keydown",
-        spaceId ? handleKeyDown : handleArenaKeyDown
-      );
-  }, [userPosition, arenaCurrentUser, spaceId]);
+    if (spaceId && spaceId !== "demo") {
+      window.addEventListener("keydown", handleKeyDown);
+      return () => window.removeEventListener("keydown", handleKeyDown);
+    }
+  }, [userPosition, spaceId, handleKeyDown]);
 
   const handleAddElement = async () => {
     if (!user) {
@@ -344,14 +275,14 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
       return;
     }
     const elementId = prompt("Enter element ID");
-    const x = Number(prompt("Enter x coordinate"));
-    const y = Number(prompt("Enter y coordinate"));
+    const x = Number(prompt("Enter x coordinate (grid position)"));
+    const y = Number(prompt("Enter y coordinate (grid position)"));
     if (elementId && spaceId) {
       const response = await addElementToSpace(
         spaceId,
         elementId,
-        x,
-        y,
+        x * GRID_SIZE, // Convert grid position to pixel position
+        y * GRID_SIZE, // Convert grid position to pixel position
         user.token
       );
       if (response.status === 200 && space) {
@@ -380,31 +311,16 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
     }
   };
 
-  // Render Arena when no spaceId is provided
+  // If no spaceId, show simple demo view
   if (!spaceId) {
     return (
-      <div className="p-4" onKeyDown={handleArenaKeyDown} tabIndex={0}>
-        <h1 className="text-2xl font-bold mb-4">Arena</h1>
-        <div className="mb-4">
-          <p className="text-sm text-gray-600">Token: {arenaParams.token}</p>
-          <p className="text-sm text-gray-600">
-            Space ID: {arenaParams.spaceId}
-          </p>
-          <p className="text-sm text-gray-600">
-            Connected Users: {arenaUsers.size + (arenaCurrentUser ? 1 : 0)}
+      <div className="min-h-screen bg-gray-100 p-6">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-3xl font-bold mb-6">Space Demo</h1>
+          <p className="text-gray-600">
+            No space selected. Please go back and select a space.
           </p>
         </div>
-        <div className="border rounded-lg overflow-hidden">
-          <canvas
-            ref={arenaCanvasRef}
-            width={2000}
-            height={2000}
-            className="bg-white"
-          />
-        </div>
-        <p className="mt-2 text-sm text-gray-500">
-          Use arrow keys to move your avatar
-        </p>
       </div>
     );
   }
@@ -413,19 +329,14 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Space View</h1>
+        <h1 className="text-3xl font-bold mb-6">
+          Space View - Chessboard Grid
+        </h1>
         <button
-          onClick={() =>
-            navigate(user?.role === "admin" ? "/admin" : user ? "/user" : "/")
-          }
+          onClick={() => navigate("/")}
           className="bg-red-500 text-white p-2 rounded hover:bg-red-600 mb-6"
         >
-          Back to{" "}
-          {user
-            ? user.role === "admin"
-              ? "Admin Dashboard"
-              : "User Dashboard"
-            : "Home"}
+          Back to Home
         </button>
         {user && (
           <button
@@ -435,32 +346,59 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
             Add Element
           </button>
         )}
-        <canvas
-          ref={canvasRef}
-          width={800}
-          height={600}
-          className="border border-gray-300"
-        ></canvas>
-        <div className="bg-white p-6 rounded shadow-md mt-6">
-          <h2 className="text-xl font-bold mb-4">Elements</h2>
-          {space?.elements.map((element) => (
-            <div
-              key={element.id}
-              className="flex justify-between items-center mb-2"
-            >
-              <span>
-                {element.element.imageUrl} ({element.x}, {element.y})
-              </span>
-              {user && (
-                <button
-                  onClick={() => handleDeleteElement(element.id)}
-                  className="bg-red-500 text-white p-2 rounded hover:bg-red-600"
-                >
-                  Delete
-                </button>
-              )}
+
+        <div className="border-2 border-gray-400 rounded-lg overflow-hidden shadow-lg">
+          <canvas
+            ref={canvasRef}
+            width={CANVAS_WIDTH}
+            height={CANVAS_HEIGHT}
+            className="bg-white block mx-auto"
+          />
+        </div>
+
+        <div className="mt-4 p-4 bg-white rounded shadow-md">
+          <h3 className="text-lg font-semibold mb-2">Controls</h3>
+          <p className="text-sm text-gray-600 mb-2">
+            Use arrow keys to move your Pacman around the chessboard grid
+          </p>
+          <div className="flex space-x-4 text-sm">
+            <div className="flex items-center">
+              <div className="w-4 h-4 bg-[#FFD700] rounded-full mr-2"></div>
+              <span>You (Gold Pacman)</span>
             </div>
-          ))}
+            <div className="flex items-center">
+              <div className="w-4 h-4 bg-[#4ECDC4] rounded-full mr-2"></div>
+              <span>Other Users (Teal Pacman)</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded shadow-md mt-6">
+          <h2 className="text-xl font-bold mb-4">Space Elements</h2>
+          {space?.elements.length ? (
+            space.elements.map((element) => (
+              <div
+                key={element.id}
+                className="flex justify-between items-center mb-2 p-2 border-b"
+              >
+                <span>
+                  {element.element.imageUrl} (Grid:{" "}
+                  {Math.floor(element.x / GRID_SIZE)},{" "}
+                  {Math.floor(element.y / GRID_SIZE)})
+                </span>
+                {user && (
+                  <button
+                    onClick={() => handleDeleteElement(element.id)}
+                    className="bg-red-500 text-white p-2 rounded hover:bg-red-600 text-sm"
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-500">No elements in this space yet.</p>
+          )}
         </div>
       </div>
     </div>

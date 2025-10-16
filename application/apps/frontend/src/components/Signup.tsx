@@ -14,7 +14,11 @@ const Signup: React.FC<SignupProps> = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleSignup = async () => {
+  const handleSignup = async (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault(); // Prevent default form submission
+    }
+
     const response = await signup(username, password, role);
     console.log(response);
     if (response.status === 200) {
@@ -26,9 +30,16 @@ const Signup: React.FC<SignupProps> = () => {
     }
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    handleSignup(e);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded shadow-md w-96">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white p-8 rounded shadow-md w-96"
+      >
         <h2 className="text-2xl font-bold mb-6 text-center">Sign Up</h2>
         {error && <p className="text-red-500 mb-4">{error}</p>}
         <div className="mb-4">
@@ -38,6 +49,7 @@ const Signup: React.FC<SignupProps> = () => {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             className="w-full p-2 border rounded"
+            required
           />
         </div>
         <div className="mb-4">
@@ -47,6 +59,7 @@ const Signup: React.FC<SignupProps> = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full p-2 border rounded"
+            required
           />
         </div>
         <div className="mb-4">
@@ -56,12 +69,12 @@ const Signup: React.FC<SignupProps> = () => {
             onChange={(e) => setRole(e.target.value as "User" | "Admin")}
             className="w-full p-2 border rounded"
           >
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
+            <option value="User">User</option>
+            <option value="Admin">Admin</option>
           </select>
         </div>
         <button
-          onClick={handleSignup}
+          type="submit"
           className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
         >
           Sign Up
@@ -72,7 +85,7 @@ const Signup: React.FC<SignupProps> = () => {
             Login
           </a>
         </p>
-      </div>
+      </form>
     </div>
   );
 };

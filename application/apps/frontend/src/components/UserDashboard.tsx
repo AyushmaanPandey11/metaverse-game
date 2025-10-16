@@ -6,9 +6,10 @@ import { ImagePreview } from "./ImagePreview";
 
 interface UserDashboardProps {
   user: User;
+  onLogout: () => void;
 }
 
-const UserDashboard: React.FC<UserDashboardProps> = ({ user }) => {
+const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [avatars, setAvatars] = useState<Avatar[]>([]);
   const [name, setName] = useState("");
@@ -80,8 +81,8 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user }) => {
         </nav>
         <button
           onClick={() => {
-            localStorage.clear();
-            navigate("/login");
+            onLogout(); // Call the parent's logout function
+            navigate("/");
           }}
           className="m-6 bg-red-500 text-white py-3 px-6 rounded-lg hover:bg-red-600 transition-all duration-300"
         >
@@ -136,7 +137,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user }) => {
                   <ImagePreview
                     imageUrl={mapId}
                     altText="Map Preview"
-                    size="w-20 h-20"
+                    size="w-40 h-40"
                   />
                 </div>
               </div>

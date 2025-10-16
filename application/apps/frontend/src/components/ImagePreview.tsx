@@ -7,7 +7,7 @@ interface ImagePreviewProps {
 }
 
 export const ImagePreview = memo(
-  ({ imageUrl, altText, size = "w-24 h-24" }: ImagePreviewProps) => {
+  ({ imageUrl, altText, size = "w-40 h-40" }: ImagePreviewProps) => {
     const [isImageError, setIsImageError] = useState(false);
 
     return (

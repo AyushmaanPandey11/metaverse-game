@@ -20,9 +20,10 @@ interface Map {
 
 interface AdminDashboardProps {
   user: User;
+  onLogout: () => void;
 }
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [maps, setMaps] = useState<Map[]>([]);
   const [elementImageUrl, setElementImageUrl] = useState("");
@@ -129,8 +130,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
         </nav>
         <button
           onClick={() => {
-            localStorage.clear();
-            navigate("/login");
+            onLogout(); // Call the parent's logout function
+            navigate("/");
           }}
           className="m-6 bg-red-500 text-white py-3 px-6 rounded-lg hover:bg-red-600 transition-all duration-300"
         >
@@ -161,7 +162,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                   <ImagePreview
                     imageUrl={elementImageUrl}
                     altText="Element Preview"
-                    size="w-20 h-20"
+                    size="w-40 h-40"
                   />
                 </div>
               </div>
@@ -233,7 +234,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                   <ImagePreview
                     imageUrl={avatarImageUrl}
                     altText="Avatar Preview"
-                    size="w-20 h-20"
+                    size="w-40 h-40"
                   />
                 </div>
               </div>
@@ -293,7 +294,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                   <ImagePreview
                     imageUrl={mapThumbnail}
                     altText="Map Thumbnail Preview"
-                    size="w-20 h-20"
+                    size="w-40 h-40"
                   />
                 </div>
               </div>
