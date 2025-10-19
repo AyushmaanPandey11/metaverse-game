@@ -8,7 +8,7 @@ import {
   getMaps,
 } from "../api";
 import { ImagePreview } from "./ImagePreview";
-import type { User, Space } from "../types";
+import type { User, Space } from "../types/types";
 
 interface Map {
   id: string;

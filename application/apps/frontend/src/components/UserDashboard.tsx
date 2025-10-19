@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { createSpace, getSpaces, getAvatars, updateAvatar } from "../api";
-import type { User, Space, Avatar } from "../types";
+import type { User, Space, Avatar } from "../types/types";
 import { ImagePreview } from "./ImagePreview";
 
 interface UserDashboardProps {

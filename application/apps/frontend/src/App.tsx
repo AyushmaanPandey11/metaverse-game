@@ -6,7 +6,7 @@ import Signup from "./components/Signup";
 import UserDashboard from "./components/UserDashboard";
 import AdminDashboard from "./components/AdminDashboard";
 import SpaceView from "./components/SpaceView";
-import type { User } from "./types";
+import type { User } from "./types/types";
 import LandingPage from "./Landing";
 
 const App: React.FC = () => {

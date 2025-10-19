@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { signin } from "../api";
-import type { User } from "../types";
+import type { User } from "../types/types";
 
 interface LoginProps {
   setUser: (user: User) => void;

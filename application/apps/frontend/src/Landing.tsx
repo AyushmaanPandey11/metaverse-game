@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { memo } from "react";
-import type { User } from "./types";
+import type { User } from "./types/types";
 
 const LandingPage: React.FC<{ setUser: (user: User | null) => void }> = memo(
   () => {
