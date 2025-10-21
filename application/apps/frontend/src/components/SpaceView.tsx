@@ -7,7 +7,6 @@ import type { outGoingMessageType } from "../types/wsMessageType";
 const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
   const { spaceId } = useParams<{ spaceId: string }>();
   const [space, setSpace] = useState<Space | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [currentUser, setCurrentUser] = useState<any>({
     x: 5,
     y: 5,
@@ -15,6 +14,12 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
   });
   const [users, setUsers] = useState(new Map());
   const [currentDirection, setCurrentDirection] = useState<string>("right");
+  const [nearbyUsers, setNearbyUsers] = useState<string[]>([]);
+  const [chatMessages, setChatMessages] = useState<
+    Array<{ userId: string; message: string; timestamp: number }>
+  >([]);
+  const [messageInput, setMessageInput] = useState("");
+  const [showChat, setShowChat] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const navigate = useNavigate();
@@ -25,7 +30,42 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
   const CANVAS_HEIGHT = 600;
   const PACMAN_RADIUS = 15;
 
-  // WebSocket message handler using Arena logic
+  // Calculate nearby users (within 1 grid cell distance)
+  const calculateNearbyUsers = useCallback(() => {
+    if (!currentUser || currentUser.x === undefined) return [];
+
+    const nearby: string[] = [];
+    users.forEach((otherUser) => {
+      if (
+        otherUser.userId &&
+        otherUser.x !== undefined &&
+        otherUser.y !== undefined
+      ) {
+        const xDiff = Math.abs(currentUser.x - otherUser.x);
+        const yDiff = Math.abs(currentUser.y - otherUser.y);
+
+        // Check if within 1 grid cell (including diagonals)
+        if (xDiff <= 1 && yDiff <= 1 && !(xDiff === 0 && yDiff === 0)) {
+          nearby.push(otherUser.userId);
+        }
+      }
+    });
+
+    return nearby;
+  }, [currentUser, users]);
+
+  // Update nearby users whenever position changes
+  useEffect(() => {
+    const nearby = calculateNearbyUsers();
+    setNearbyUsers(nearby);
+
+    // Auto-show chat if there are nearby users
+    if (nearby.length > 0 && !showChat) {
+      setShowChat(true);
+    }
+  }, [currentUser, users, calculateNearbyUsers, showChat]);
+
+  // WebSocket message handler
   const handleWebSocketMessage = useCallback((message: outGoingMessageType) => {
     switch (message.type) {
       case "space-joined":
@@ -33,6 +73,7 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
           setCurrentUser({
             x: message.payload.spawn.x,
             y: message.payload.spawn.y,
+            // userId: message.payload.userId,
           });
 
           const userMap = new Map();
@@ -91,6 +132,17 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
           return newUsers;
         });
         break;
+
+      case "chat-message":
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            userId: message.payload.userId,
+            message: message.payload.message,
+            timestamp: Date.now(),
+          },
+        ]);
+        break;
     }
   }, []);
 
@@ -98,8 +150,6 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
     (newX: number, newY: number, direction: string) => {
       if (!currentUser) return;
 
-      // Update local position immediately for smooth movement
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setCurrentUser((prev: any) => ({
         ...prev,
         x: newX,
@@ -107,7 +157,6 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
       }));
       setCurrentDirection(direction);
 
-      // Send to WebSocket if available
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
         wsRef.current.send(
           JSON.stringify({
@@ -124,7 +173,41 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
     [currentUser]
   );
 
-  // Initialize WebSocket connection and handle space data
+  // Send chat message
+  const handleSendMessage = useCallback(() => {
+    if (
+      !messageInput.trim() ||
+      nearbyUsers.length === 0 ||
+      !wsRef.current ||
+      wsRef.current.readyState !== WebSocket.OPEN
+    ) {
+      return;
+    }
+
+    wsRef.current.send(
+      JSON.stringify({
+        type: "chat",
+        payload: {
+          otherUsers: nearbyUsers,
+          message: messageInput.trim(),
+        },
+      })
+    );
+
+    // Add own message to chat
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        userId: currentUser.userId || "You",
+        message: messageInput.trim(),
+        timestamp: Date.now(),
+      },
+    ]);
+
+    setMessageInput("");
+  }, [messageInput, nearbyUsers, currentUser]);
+
+  // Initialize WebSocket connection
   useEffect(() => {
     if (spaceId && spaceId !== "demo" && user?.token) {
       const fetchSpace = async () => {
@@ -162,7 +245,7 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
     }
   }, [spaceId, user?.token, handleWebSocketMessage]);
 
-  // Draw the chessboard grid and users
+  // Draw canvas
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -170,19 +253,17 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw chessboard grid
     const rows = Math.floor(CANVAS_HEIGHT / GRID_SIZE);
     const cols = Math.floor(CANVAS_WIDTH / GRID_SIZE);
 
+    // Draw chessboard grid
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < cols; col++) {
         const x = col * GRID_SIZE;
         const y = row * GRID_SIZE;
 
-        // Chessboard pattern
         if ((row + col) % 2 === 0) {
           ctx.fillStyle = "#f0d9b5";
         } else {
@@ -190,14 +271,13 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
         }
         ctx.fillRect(x, y, GRID_SIZE, GRID_SIZE);
 
-        // Grid lines
         ctx.strokeStyle = "#8b7355";
         ctx.lineWidth = 0.5;
         ctx.strokeRect(x, y, GRID_SIZE, GRID_SIZE);
       }
     }
 
-    // Draw space elements if available
+    // Draw space elements
     if (space?.elements) {
       space.elements.forEach((element) => {
         const img = new Image();
@@ -214,21 +294,36 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
       });
     }
 
-    // Draw other users as Pacman
+    // Highlight nearby users with a glow effect
     users.forEach((user) => {
       if (user.x !== undefined && user.y !== undefined) {
+        const isNearby = nearbyUsers.includes(user.userId);
+
+        // Draw glow for nearby users
+        if (isNearby) {
+          const x = user.x * GRID_SIZE + GRID_SIZE / 2;
+          const y = user.y * GRID_SIZE + GRID_SIZE / 2;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(x, y, PACMAN_RADIUS + 8, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(76, 205, 196, 0.3)";
+          ctx.fill();
+          ctx.restore();
+        }
+
         drawPacman(
           ctx,
           user.x,
           user.y,
           user.direction || "right",
-          "#4ECDC4",
+          isNearby ? "#00CED1" : "#4ECDC4",
           `User ${user.userId.substring(0, 6)}`
         );
       }
     });
 
-    // Draw current user as Pacman
+    // Draw current user
     if (
       currentUser &&
       currentUser.x !== undefined &&
@@ -243,7 +338,7 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
         "You"
       );
     }
-  }, [space, users, currentUser, currentDirection]);
+  }, [space, users, currentUser, currentDirection, nearbyUsers]);
 
   const drawPacman = (
     ctx: CanvasRenderingContext2D,
@@ -274,14 +369,12 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
         break;
     }
 
-    // Draw Pacman body
     ctx.beginPath();
     ctx.fillStyle = color;
     ctx.arc(0, 0, PACMAN_RADIUS, Math.PI / 6, (11 * Math.PI) / 6);
     ctx.lineTo(0, 0);
     ctx.fill();
 
-    // Draw Pacman eye
     ctx.beginPath();
     ctx.fillStyle = "#000";
     ctx.arc(
@@ -295,7 +388,6 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
 
     ctx.restore();
 
-    // Draw user label
     ctx.fillStyle = "#000";
     ctx.font = "12px Arial";
     ctx.textAlign = "center";
@@ -325,9 +417,11 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
           newX += 1;
           direction = "right";
           e.preventDefault();
+        } else if (e.key === "Enter" && showChat) {
+          handleSendMessage();
+          e.preventDefault();
         }
 
-        // Ensure movement stays within canvas bounds
         const maxX = Math.floor(CANVAS_WIDTH / GRID_SIZE) - 1;
         const maxY = Math.floor(CANVAS_HEIGHT / GRID_SIZE) - 1;
         newX = Math.max(0, Math.min(newX, maxX));
@@ -338,7 +432,7 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
         }
       }
     },
-    [currentUser, currentDirection, handleMove]
+    [currentUser, currentDirection, handleMove, showChat, handleSendMessage]
   );
 
   useEffect(() => {
@@ -383,8 +477,8 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex flex-row justify-between ">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex flex-row justify-between">
           <h1 className="text-3xl font-bold mb-6">
             Space View - Chessboard Grid
           </h1>
@@ -398,42 +492,127 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
         {user && (
           <button
             onClick={handleAddElement}
-            className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 mb-6 ml-4"
+            className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 mb-6"
           >
             Add Element
           </button>
         )}
 
-        <div className="border-2 border-gray-400 rounded-lg overflow-hidden shadow-lg">
-          <canvas
-            ref={canvasRef}
-            width={CANVAS_WIDTH}
-            height={CANVAS_HEIGHT}
-            className="bg-white block mx-auto"
-          />
-        </div>
-
-        <div className="mt-4 p-4 bg-white rounded shadow-md">
-          <h3 className="text-lg font-semibold mb-2">Controls</h3>
-          <p className="text-sm text-gray-600 mb-2">
-            Use arrow keys to move your Pacman around the chessboard grid
-          </p>
-          <div className="flex space-x-4 text-sm">
-            <div className="flex items-center">
-              <div className="w-4 h-4 bg-[#FFD700] rounded-full mr-2"></div>
-              <span>You (Gold Pacman)</span>
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <div className="border-2 border-gray-400 rounded-lg overflow-hidden shadow-lg">
+              <canvas
+                ref={canvasRef}
+                width={CANVAS_WIDTH}
+                height={CANVAS_HEIGHT}
+                className="bg-white block mx-auto"
+              />
             </div>
-            <div className="flex items-center">
-              <div className="w-4 h-4 bg-[#4ECDC4] rounded-full mr-2"></div>
-              <span>Other Users (Teal Pacman)</span>
+
+            <div className="mt-4 p-4 bg-white rounded shadow-md">
+              <h3 className="text-lg font-semibold mb-2">Controls</h3>
+              <p className="text-sm text-gray-600 mb-2">
+                Use arrow keys to move your Pacman around the chessboard grid
+              </p>
+              <div className="flex space-x-4 text-sm">
+                <div className="flex items-center">
+                  <div className="w-4 h-4 bg-[#FFD700] rounded-full mr-2"></div>
+                  <span>You (Gold Pacman)</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-4 h-4 bg-[#4ECDC4] rounded-full mr-2"></div>
+                  <span>Other Users</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-4 h-4 bg-[#00CED1] rounded-full mr-2"></div>
+                  <span>Nearby Users</span>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600 mt-2">
+                Connected Users: {users.size + 1}
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Position: ({currentUser.x}, {currentUser.y})
+              </p>
+              <p className="text-sm text-green-600 mt-1">
+                Nearby Users: {nearbyUsers.length}
+              </p>
             </div>
           </div>
-          <p className="text-sm text-gray-600 mt-2">
-            Connected Users: {users.size + 1}
-          </p>
-          <p className="text-sm text-gray-500 mt-1">
-            Position: ({currentUser.x}, {currentUser.y})
-          </p>
+
+          {/* Chat Panel */}
+          <div className="w-80">
+            <div className="bg-white rounded-lg shadow-md p-4 h-full flex flex-col">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-lg font-semibold">Chat</h3>
+                <button
+                  onClick={() => setShowChat(!showChat)}
+                  className="text-sm text-gray-600 hover:text-gray-800"
+                >
+                  {showChat ? "Hide" : "Show"}
+                </button>
+              </div>
+
+              {showChat && (
+                <>
+                  {nearbyUsers.length === 0 ? (
+                    <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
+                      Move near other users to chat
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex-1 overflow-y-auto mb-3 space-y-2 max-h-96">
+                        {chatMessages.map((msg, idx) => (
+                          <div
+                            key={idx}
+                            className={`p-2 rounded ${
+                              msg.userId === currentUser.userId
+                                ? "bg-blue-100 ml-4"
+                                : "bg-gray-100 mr-4"
+                            }`}
+                          >
+                            <div className="text-xs font-semibold text-gray-600">
+                              {msg.userId === currentUser.userId
+                                ? "You"
+                                : `User ${msg.userId.substring(0, 6)}`}
+                            </div>
+                            <div className="text-sm">{msg.message}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="border-t pt-3">
+                        <div className="text-xs text-gray-500 mb-2">
+                          Chatting with: {nearbyUsers.length} user(s)
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={messageInput}
+                            onChange={(e) => setMessageInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleSendMessage();
+                              }
+                            }}
+                            placeholder="Type a message..."
+                            className="flex-1 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <button
+                            onClick={handleSendMessage}
+                            disabled={!messageInput.trim()}
+                            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                          >
+                            Send
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -44,4 +44,11 @@ export type outGoingMessageType =
         x: number;
         y: number;
       };
+    }
+  | {
+      type: "chat-message";
+      payload: {
+        userId: string;
+        message: string;
+      };
     };
