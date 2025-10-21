@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getSpace, addElementToSpace, connectWebSocket } from "../api";
-import type { User, Space } from "../types/types";
+import type { User, Space, SpaceViewProps } from "../types/types";
 import type { outGoingMessageType } from "../types/wsMessageType";
-
-interface SpaceViewProps {
-  user: User | null;
-}
 
 const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
   const { spaceId } = useParams<{ spaceId: string }>();
   const [space, setSpace] = useState<Space | null>(null);
-  const [currentUser, setCurrentUser] = useState<any>({});
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [currentUser, setCurrentUser] = useState<any>({
+    x: 5,
+    y: 5,
+    userId: "local-user",
+  });
   const [users, setUsers] = useState(new Map());
   const [currentDirection, setCurrentDirection] = useState<string>("right");
   const wsRef = useRef<WebSocket | null>(null);
@@ -19,26 +20,22 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
   const navigate = useNavigate();
 
   // Grid configuration
-  const GRID_SIZE = 40; // Size of each grid cell in pixels
+  const GRID_SIZE = 40;
   const CANVAS_WIDTH = 800;
   const CANVAS_HEIGHT = 600;
-  const PACMAN_RADIUS = 15; // Radius of Pacman
+  const PACMAN_RADIUS = 15;
 
   // WebSocket message handler using Arena logic
   const handleWebSocketMessage = useCallback((message: outGoingMessageType) => {
     switch (message.type) {
       case "space-joined":
         {
-          // <-- START BLOCK SCOPE
-          // Initialize current user position and other users
           setCurrentUser({
             x: message.payload.spawn.x,
             y: message.payload.spawn.y,
-            userId: message.payload.userId,
           });
 
-          // Initialize other users from the payload
-          const userMap = new Map(); // <-- The 'const' that needs the block scope
+          const userMap = new Map();
           message.payload.users.forEach(
             (user: { userId: string; x: number; y: number }) => {
               userMap.set(user.userId, {
@@ -50,7 +47,7 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
             }
           );
           setUsers(userMap);
-        } // <-- END BLOCK SCOPE
+        }
         break;
 
       case "user-join":
@@ -80,7 +77,6 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
         break;
 
       case "movement-rejected":
-        // Reset current user position if movement was rejected
         setCurrentUser((prev: User) => ({
           ...prev,
           x: message.payload.x,
@@ -98,25 +94,32 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
     }
   }, []);
 
-  // Handle user movement using Arena logic
   const handleMove = useCallback(
     (newX: number, newY: number, direction: string) => {
-      if (!currentUser || !wsRef.current) return;
+      if (!currentUser) return;
 
-      // Send movement request
-      wsRef.current.send(
-        JSON.stringify({
-          type: "move",
-          payload: {
-            x: newX,
-            y: newY,
-            userId: currentUser.userId,
-          },
-        })
-      );
-
-      // Update direction locally for immediate visual feedback
+      // Update local position immediately for smooth movement
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setCurrentUser((prev: any) => ({
+        ...prev,
+        x: newX,
+        y: newY,
+      }));
       setCurrentDirection(direction);
+
+      // Send to WebSocket if available
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "move",
+            payload: {
+              x: newX,
+              y: newY,
+              userId: currentUser.userId,
+            },
+          })
+        );
+      }
     },
     [currentUser]
   );
@@ -124,7 +127,6 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
   // Initialize WebSocket connection and handle space data
   useEffect(() => {
     if (spaceId && spaceId !== "demo" && user?.token) {
-      // Fetch space data
       const fetchSpace = async () => {
         const response = await getSpace(spaceId);
         if (response.status === 200) {
@@ -133,11 +135,9 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
       };
       fetchSpace();
 
-      // Initialize WebSocket connection
       wsRef.current = connectWebSocket(spaceId, user.token);
 
       wsRef.current.onopen = () => {
-        // Join the space once connected
         wsRef.current?.send(
           JSON.stringify({
             type: "join",
@@ -164,41 +164,42 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
 
   // Draw the chessboard grid and users
   useEffect(() => {
-    if (spaceId && spaceId !== "demo") {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Draw chessboard grid
-      const rows = Math.floor(CANVAS_HEIGHT / GRID_SIZE);
-      const cols = Math.floor(CANVAS_WIDTH / GRID_SIZE);
+    // Draw chessboard grid
+    const rows = Math.floor(CANVAS_HEIGHT / GRID_SIZE);
+    const cols = Math.floor(CANVAS_WIDTH / GRID_SIZE);
 
-      for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < cols; col++) {
-          const x = col * GRID_SIZE;
-          const y = row * GRID_SIZE;
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const x = col * GRID_SIZE;
+        const y = row * GRID_SIZE;
 
-          // Chessboard pattern
-          if ((row + col) % 2 === 0) {
-            ctx.fillStyle = "#f0d9b5"; // Light square
-          } else {
-            ctx.fillStyle = "#b58863"; // Dark square
-          }
-          ctx.fillRect(x, y, GRID_SIZE, GRID_SIZE);
-
-          // Grid lines
-          ctx.strokeStyle = "#000";
-          ctx.lineWidth = 1;
-          ctx.strokeRect(x, y, GRID_SIZE, GRID_SIZE);
+        // Chessboard pattern
+        if ((row + col) % 2 === 0) {
+          ctx.fillStyle = "#f0d9b5";
+        } else {
+          ctx.fillStyle = "#b58863";
         }
-      }
+        ctx.fillRect(x, y, GRID_SIZE, GRID_SIZE);
 
-      // Draw space elements
-      space?.elements.forEach((element) => {
+        // Grid lines
+        ctx.strokeStyle = "#8b7355";
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(x, y, GRID_SIZE, GRID_SIZE);
+      }
+    }
+
+    // Draw space elements if available
+    if (space?.elements) {
+      space.elements.forEach((element) => {
         const img = new Image();
         img.src = element.element.imageUrl;
         img.onload = () => {
@@ -211,35 +212,39 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
           );
         };
       });
+    }
 
-      // Draw other users as Pacman
-      users.forEach((user) => {
-        if (!user.x) return;
+    // Draw other users as Pacman
+    users.forEach((user) => {
+      if (user.x !== undefined && user.y !== undefined) {
         drawPacman(
           ctx,
           user.x,
           user.y,
           user.direction || "right",
           "#4ECDC4",
-          `User ${user.userId}`
-        );
-      });
-
-      // Draw current user as Pacman
-      if (currentUser && currentUser.x !== undefined) {
-        drawPacman(
-          ctx,
-          currentUser.x,
-          currentUser.y,
-          currentDirection,
-          "#FFD700",
-          "You"
+          `User ${user.userId.substring(0, 6)}`
         );
       }
-    }
-  }, [space, users, currentUser, currentDirection, spaceId]);
+    });
 
-  // Function to draw Pacman (unchanged from your original)
+    // Draw current user as Pacman
+    if (
+      currentUser &&
+      currentUser.x !== undefined &&
+      currentUser.y !== undefined
+    ) {
+      drawPacman(
+        ctx,
+        currentUser.x,
+        currentUser.y,
+        currentDirection,
+        "#FFD700",
+        "You"
+      );
+    }
+  }, [space, users, currentUser, currentDirection]);
+
   const drawPacman = (
     ctx: CanvasRenderingContext2D,
     gridX: number,
@@ -254,7 +259,6 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
     ctx.save();
     ctx.translate(x, y);
 
-    // Rotate based on direction
     switch (direction) {
       case "up":
         ctx.rotate(-Math.PI / 2);
@@ -267,11 +271,10 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
         break;
       case "right":
       default:
-        // No rotation needed for right
         break;
     }
 
-    // Draw Pacman body (open mouth)
+    // Draw Pacman body
     ctx.beginPath();
     ctx.fillStyle = color;
     ctx.arc(0, 0, PACMAN_RADIUS, Math.PI / 6, (11 * Math.PI) / 6);
@@ -301,12 +304,7 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (
-        spaceId &&
-        spaceId !== "demo" &&
-        currentUser &&
-        currentUser.x !== undefined
-      ) {
+      if (currentUser && currentUser.x !== undefined) {
         let newX = currentUser.x;
         let newY = currentUser.y;
         let direction = currentDirection;
@@ -314,15 +312,19 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
         if (e.key === "ArrowUp") {
           newY -= 1;
           direction = "up";
+          e.preventDefault();
         } else if (e.key === "ArrowDown") {
           newY += 1;
           direction = "down";
+          e.preventDefault();
         } else if (e.key === "ArrowLeft") {
           newX -= 1;
           direction = "left";
+          e.preventDefault();
         } else if (e.key === "ArrowRight") {
           newX += 1;
           direction = "right";
+          e.preventDefault();
         }
 
         // Ensure movement stays within canvas bounds
@@ -331,18 +333,18 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
         newX = Math.max(0, Math.min(newX, maxX));
         newY = Math.max(0, Math.min(newY, maxY));
 
-        handleMove(newX, newY, direction);
+        if (newX !== currentUser.x || newY !== currentUser.y) {
+          handleMove(newX, newY, direction);
+        }
       }
     },
-    [currentUser, currentDirection, spaceId, handleMove]
+    [currentUser, currentDirection, handleMove]
   );
 
   useEffect(() => {
-    if (spaceId && spaceId !== "demo") {
-      window.addEventListener("keydown", handleKeyDown);
-      return () => window.removeEventListener("keydown", handleKeyDown);
-    }
-  }, [handleKeyDown, spaceId]);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
 
   const handleAddElement = async () => {
     if (!user) {
@@ -356,8 +358,8 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
       const response = await addElementToSpace(
         spaceId,
         elementId,
-        x * GRID_SIZE, // Convert grid position to pixel position
-        y * GRID_SIZE, // Convert grid position to pixel position
+        x * GRID_SIZE,
+        y * GRID_SIZE,
         user.token
       );
       if (response.status === 200 && space) {
@@ -366,7 +368,6 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
     }
   };
 
-  // If no spaceId, show simple demo view
   if (!spaceId) {
     return (
       <div className="min-h-screen bg-gray-100 p-6">
@@ -383,15 +384,17 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">
-          Space View - Chessboard Grid
-        </h1>
-        <button
-          onClick={() => navigate("/")}
-          className="bg-red-500 text-white p-2 rounded hover:bg-red-600 mb-6"
-        >
-          Back to Home
-        </button>
+        <div className="flex flex-row justify-between ">
+          <h1 className="text-3xl font-bold mb-6">
+            Space View - Chessboard Grid
+          </h1>
+          <button
+            onClick={() => navigate("/")}
+            className="bg-red-500 text-white p-2 rounded hover:bg-red-600 mb-6"
+          >
+            Back to Home
+          </button>
+        </div>
         {user && (
           <button
             onClick={handleAddElement}
@@ -426,7 +429,10 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
             </div>
           </div>
           <p className="text-sm text-gray-600 mt-2">
-            Connected Users: {users.size + (currentUser.userId ? 1 : 0)}
+            Connected Users: {users.size + 1}
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            Position: ({currentUser.x}, {currentUser.y})
           </p>
         </div>
       </div>

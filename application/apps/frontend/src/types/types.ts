@@ -44,3 +44,7 @@ export interface Map {
   dimensions: string;
   defaultElements: { elementId: string; x: number; y: number }[];
 }
+
+export interface SpaceViewProps {
+  user: User | null;
+}
