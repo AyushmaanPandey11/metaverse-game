@@ -28,24 +28,36 @@ export class User {
         switch (parsedData.type) {
           case "join":
             const { spaceId, token } = parsedData.payload;
-            const decoded = jwt.verify(token, secretKey) as JwtPayload;
-            const userId = decoded.userId;
-            if (!userId) {
+            const isDemo = spaceId === "demo";
+            if (!isDemo && !token) {
               this.ws.close();
               return;
             }
+            let userId: string;
+            if (isDemo) {
+              userId = this.id;
+            } else {
+              const decoded = jwt.verify(token, secretKey) as JwtPayload;
+              userId = decoded.userId;
+              if (!userId) {
+                this.ws.close();
+                return;
+              }
+            }
             this.userId = userId;
-            this.spaceId = spaceId;
-            const userSpace = await roomInstance.getSpaceData(this.spaceId);
+            const userSpace = await roomInstance.getSpaceData(spaceId);
             if (!userSpace) {
               this.ws.close();
               return;
             }
-            const roomUsers = Room.getInstance().spaces.get(spaceId) ?? [];
-            const userCoords = roomUsers.map((user) => ({
-              x: user.x,
-              y: user.y,
-            }));
+            this.spaceId = spaceId;
+            const roomUsers = roomInstance.spaces.get(spaceId) ?? [];
+            const userCoords = roomUsers
+              .filter((u) => u.id !== this.id)
+              .map((u) => ({
+                x: u.x,
+                y: u.y,
+              }));
             const spawnPoint = this.findNewUserCoordinates(
               userSpace.width,
               userSpace.height,
@@ -55,15 +67,15 @@ export class User {
             if (!spawnPoint) {
               this.ws.close();
               return;
-            } else {
-              this.x = spawnPoint.x;
-              this.y = spawnPoint.y;
             }
+            this.x = spawnPoint.x;
+            this.y = spawnPoint.y;
             roomInstance.addUser(this, spaceId);
             this.ws.send(
               JSON.stringify({
                 type: "space-joined",
                 payload: {
+                  userId: this.userId!,
                   spawn: {
                     x: this.x,
                     y: this.y,
@@ -72,7 +84,11 @@ export class User {
                     roomInstance.spaces
                       .get(spaceId)
                       ?.filter((u) => u.id !== this.id)
-                      ?.map((u) => ({ id: u.userId! })) || [],
+                      ?.map((u) => ({
+                        userId: u.userId!,
+                        x: u.x,
+                        y: u.y,
+                      })) || [],
                 },
               })
             );
@@ -86,7 +102,7 @@ export class User {
                 },
               },
               this.id,
-              this.spaceId
+              spaceId
             );
             break;
 
@@ -106,16 +122,13 @@ export class User {
               }
               // should be within the space bounds
               if (
-                x <= userSpace.width &&
                 x >= 0 &&
+                x < userSpace.width &&
                 y >= 0 &&
-                y <= userSpace.height!
+                y < userSpace.height
               ) {
                 const spaceUsers = roomInstance.spaces.get(this.spaceId!);
-                const occupiedCoords = new Set<string>();
-                userSpace.occupiedStaticTiles.forEach((coord) =>
-                  occupiedCoords.add(coord)
-                );
+                const occupiedCoords = new Set(userSpace.occupiedStaticTiles);
                 spaceUsers?.forEach((u) => {
                   if (u.id !== this.id) {
                     occupiedCoords.add(`${u.x},${u.y}`);
@@ -147,9 +160,18 @@ export class User {
                     })
                   );
                 }
+              } else {
+                this.ws.send(
+                  JSON.stringify({
+                    type: "movement-rejected",
+                    payload: {
+                      x: this.x,
+                      y: this.y,
+                    },
+                  })
+                );
               }
             } else {
-              // rejected case, can only take one step either of the axis
               this.ws.send(
                 JSON.stringify({
                   type: "movement-rejected",
@@ -165,22 +187,21 @@ export class User {
           case "chat":
             if (!this.spaceId) return;
             const { otherUsers, message } = parsedData.payload;
-            console.log(otherUsers, message);
             if (!roomInstance.spaces.get(this.spaceId)) {
               return;
             }
-            const users = roomInstance.spaces.get(this.spaceId)?.filter(
-              (u) => u.id !== this.id && otherUsers.includes(u.userId!)
-              // Math.abs(u.x - this.x) <= 1 &&
-              // Math.abs(u.y - this.y) <= 1
-            ) as unknown as User[];
+            const users = roomInstance.spaces
+              .get(this.spaceId)
+              ?.filter(
+                (u) => u.id !== this.id && otherUsers.includes(u.userId!)
+              ) as unknown as User[];
 
             users.forEach((u) => {
               u.ws.send(
                 JSON.stringify({
                   type: "chat-message",
                   payload: {
-                    userId: this.userId,
+                    userId: this.userId!,
                     message: message,
                   },
                 })

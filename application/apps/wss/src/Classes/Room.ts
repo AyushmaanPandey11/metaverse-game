@@ -19,6 +19,17 @@ export class Room {
   }
 
   public async getSpaceData(spaceId: string): Promise<SpaceCache | null> {
+    if (spaceId === "demo") {
+      const cache: SpaceCache = {
+        width: 20,
+        height: 15,
+        elements: [],
+        occupiedStaticTiles: new Set<string>(),
+      };
+      this.spaceData.set(spaceId, cache);
+      return cache;
+    }
+
     if (this.spaceData.get(spaceId)) {
       return this.spaceData.get(spaceId) as unknown as SpaceCache | null;
     }

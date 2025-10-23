@@ -77,16 +77,15 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
           });
 
           const userMap = new Map();
-          message.payload.users.forEach(
-            (user: { userId: string; x: number; y: number }) => {
-              userMap.set(user.userId, {
-                x: user.x,
-                y: user.y,
-                userId: user.userId,
-                direction: "right",
-              });
-            }
-          );
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          message.payload.users.forEach((user: any) => {
+            userMap.set(user.userId, {
+              x: user.x,
+              y: user.y,
+              userId: user.userId,
+              direction: "right",
+            });
+          });
           setUsers(userMap);
         }
         break;
@@ -209,16 +208,32 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
 
   // Initialize WebSocket connection
   useEffect(() => {
-    if (spaceId && spaceId !== "demo" && user?.token) {
+    if (!spaceId) return;
+
+    const isDemo = spaceId === "demo";
+    const hasToken = !!user?.token;
+
+    if (isDemo || hasToken) {
       const fetchSpace = async () => {
-        const response = await getSpace(spaceId);
-        if (response.status === 200) {
-          setSpace(response.data);
+        if (isDemo) {
+          // Dummy space for demo
+          setSpace({
+            id: "demo",
+            name: "Demo Space",
+            dimensions: "20x15",
+            elements: [],
+          });
+        } else {
+          const response = await getSpace(spaceId);
+          if (response.status === 200) {
+            setSpace(response.data);
+          }
         }
       };
       fetchSpace();
 
-      wsRef.current = connectWebSocket(spaceId, user.token);
+      const token = isDemo ? null : user?.token;
+      wsRef.current = connectWebSocket(spaceId, token!);
 
       wsRef.current.onopen = () => {
         wsRef.current?.send(
@@ -226,7 +241,7 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
             type: "join",
             payload: {
               spaceId,
-              token: user.token,
+              token: token,
             },
           })
         );
