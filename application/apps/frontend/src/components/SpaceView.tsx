@@ -1,13 +1,19 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getSpace, addElementToSpace, connectWebSocket } from "../api";
-import type { User, Space, SpaceViewProps } from "../types/types";
+import type { Space, SpaceViewProps } from "../types/types";
 import type { outGoingMessageType } from "../types/wsMessageType";
+
+interface CurrentUserProps {
+  x: number;
+  y: number;
+  userId?: string;
+}
 
 const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
   const { spaceId } = useParams<{ spaceId: string }>();
   const [space, setSpace] = useState<Space | null>(null);
-  const [currentUser, setCurrentUser] = useState<any>({
+  const [currentUser, setCurrentUser] = useState<CurrentUserProps>({
     x: 5,
     y: 5,
     userId: "local-user",
@@ -117,7 +123,7 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
         break;
 
       case "movement-rejected":
-        setCurrentUser((prev: User) => ({
+        setCurrentUser((prev: CurrentUserProps) => ({
           ...prev,
           x: message.payload.x,
           y: message.payload.y,
@@ -149,7 +155,7 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
     (newX: number, newY: number, direction: string) => {
       if (!currentUser) return;
 
-      setCurrentUser((prev: any) => ({
+      setCurrentUser((prev: CurrentUserProps) => ({
         ...prev,
         x: newX,
         y: newY,
