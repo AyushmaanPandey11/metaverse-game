@@ -11,12 +11,14 @@ interface UserDashboardProps {
 
 const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
   const [spaces, setSpaces] = useState<Space[]>([]);
+  const [allSpaces, setAllSpaces] = useState<Space[]>([]);
   const [avatars, setAvatars] = useState<Avatar[]>([]);
   const [name, setName] = useState("");
   const [dimensions, setDimensions] = useState("");
   const [mapId, setMapId] = useState("");
   const [selectedAvatar, setSelectedAvatar] = useState("");
   const [activeSection, setActiveSection] = useState("Select Avatar");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -32,6 +34,21 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
     };
     fetchData();
   }, [user.token]);
+
+  const fetchAllSpaces = async () => {
+    setLoading(true);
+    try {
+      const response = await getSpaces(user.token);
+      if (response.status === 200) {
+        setAllSpaces(response.data.spaces);
+      }
+    } catch (error) {
+      console.error("Error fetching spaces:", error);
+      alert("Failed to fetch spaces");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCreateSpace = async () => {
     const response = await createSpace(
@@ -55,7 +72,21 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
     }
   };
 
-  const sections = ["Create Space", "Select Avatar", "Your Spaces"];
+  const handleJoinSpace = async (spaceId: string) => {
+    try {
+      navigate(`/space/${spaceId}`);
+    } catch (error) {
+      console.error("Error joining space:", error);
+      alert("Failed to join space");
+    }
+  };
+
+  const sections = [
+    "Create Space",
+    "Select Avatar",
+    "Your Spaces",
+    "Join Spaces",
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex">
@@ -68,7 +99,12 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
           {sections.map((section) => (
             <button
               key={section}
-              onClick={() => setActiveSection(section)}
+              onClick={() => {
+                setActiveSection(section);
+                if (section === "Join Spaces") {
+                  fetchAllSpaces();
+                }
+              }}
               className={`w-full text-left py-3 px-6 text-lg transition-colors duration-200 ${
                 activeSection === section
                   ? "bg-blue-600 text-white"
@@ -201,6 +237,56 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ user, onLogout }) => {
                   </div>
                 ))
               )}
+            </div>
+          )}
+
+          {activeSection === "Join Spaces" && (
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-6">
+                Available Spaces to Join
+              </h2>
+              {loading ? (
+                <p className="text-gray-600">Loading spaces...</p>
+              ) : allSpaces.length === 0 ? (
+                <p className="text-gray-600">No spaces available to join.</p>
+              ) : (
+                <div className="space-y-4">
+                  {allSpaces.map((space) => (
+                    <div
+                      key={space.id}
+                      className="flex justify-between items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                    >
+                      <div className="flex items-center space-x-4">
+                        {space.thumbnail && (
+                          <img
+                            src={space.thumbnail}
+                            alt={`${space.name} thumbnail`}
+                            className="w-16 h-16 object-cover rounded-lg"
+                          />
+                        )}
+                        <div>
+                          <h3 className="font-semibold text-gray-800">
+                            {space.name}
+                          </h3>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleJoinSpace(space.id)}
+                        className="bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-all duration-300"
+                      >
+                        Join Space
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button
+                onClick={fetchAllSpaces}
+                disabled={loading}
+                className="mt-4 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-all duration-300 disabled:opacity-50"
+              >
+                {loading ? "Refreshing..." : "Refresh Spaces"}
+              </button>
             </div>
           )}
         </div>

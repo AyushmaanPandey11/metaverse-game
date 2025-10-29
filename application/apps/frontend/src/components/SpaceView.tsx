@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getSpace, addElementToSpace, connectWebSocket } from "../api";
+import { getSpace, connectWebSocket } from "../api";
 import type { Space, SpaceViewProps } from "../types/types";
 import type { outGoingMessageType } from "../types/wsMessageType";
 
@@ -298,18 +298,20 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
       }
     }
 
-    // Draw space elements
     if (space?.elements) {
       space.elements.forEach((element) => {
         const img = new Image();
         img.src = element.element.imageUrl;
         img.onload = () => {
+          const pixelWidth = element.element.width * GRID_SIZE;
+          const pixelHeight = element.element.height * GRID_SIZE;
+
           ctx.drawImage(
             img,
-            element.x,
-            element.y,
-            element.element.width,
-            element.element.height
+            element.x * GRID_SIZE,
+            element.y * GRID_SIZE,
+            pixelWidth,
+            pixelHeight
           );
         };
       });
@@ -461,28 +463,6 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  const handleAddElement = async () => {
-    if (!user) {
-      alert("Guests cannot add elements");
-      return;
-    }
-    const elementId = prompt("Enter element ID");
-    const x = Number(prompt("Enter x coordinate (grid position)"));
-    const y = Number(prompt("Enter y coordinate (grid position)"));
-    if (elementId && spaceId) {
-      const response = await addElementToSpace(
-        spaceId,
-        elementId,
-        x * GRID_SIZE,
-        y * GRID_SIZE,
-        user.token
-      );
-      if (response.status === 200 && space) {
-        setSpace({ ...space, elements: [...space.elements, response.data] });
-      }
-    }
-  };
-
   if (!spaceId) {
     return (
       <div className="min-h-screen bg-gray-100 p-6">
@@ -510,14 +490,6 @@ const SpaceView: React.FC<SpaceViewProps> = ({ user }) => {
             Back to Home
           </button>
         </div>
-        {user && (
-          <button
-            onClick={handleAddElement}
-            className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 mb-6"
-          >
-            Add Element
-          </button>
-        )}
 
         <div className="flex gap-4">
           <div className="flex-1">

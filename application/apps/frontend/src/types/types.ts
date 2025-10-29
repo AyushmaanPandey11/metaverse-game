@@ -8,6 +8,7 @@ export interface Space {
   name: string;
   dimensions: string;
   elements: SpaceElement[];
+  thumbnail?: string;
 }
 
 export interface SpaceElement {
